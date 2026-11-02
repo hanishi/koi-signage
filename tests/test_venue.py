@@ -63,7 +63,7 @@ def test_rejects_max_distance_off_the_floor(tmp_path: Path, m: str) -> None:
 @pytest.mark.parametrize(
     ("old", "new"),
     [
-        ("x_m = 4.5", "x_m = 9.5"),  # off the screen line
+        ("range_m = 6.0", "x_m = 9.5\nrange_m = 6.0"),  # off the screen line
         ("range_m = 6.0", "range_m = 0"),
         ("fov_deg = 120.0", "fov_deg = 181"),
         ("fov_deg = 120.0", "fov_deg = 0"),
@@ -106,3 +106,11 @@ def test_rejects_bad_screen_count(tmp_path: Path, screens: str) -> None:
     bad.write_text(GOOD.replace("screens = 3", f"screens = {screens}"))
     with pytest.raises(ValueError):
         load_venue(bad)
+
+
+def test_radar_centred_on_the_floor_unless_placed(tmp_path: Path) -> None:
+    four = tmp_path / "venue.toml"
+    four.write_text(FOUR)
+    assert load_venue(four).radar_x_m == 6.0  # the middle of 12 m, without being told
+    four.write_text(FOUR.replace("range_m = 6.0", "x_m = 2.0\nrange_m = 6.0"))
+    assert load_venue(four).radar_x_m == 2.0

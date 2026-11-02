@@ -62,7 +62,8 @@ def load_venue(path: Path) -> Venue:
     depth, reach = float(floor["depth_m"]), float(floor["max_distance_m"])
     if not 0 < reach <= depth:
         raise ValueError("max_distance_m must be in (0, depth_m]")
-    rx, rr, fov = float(radar["x_m"]), float(radar["range_m"]), float(radar["fov_deg"])
+    rx = float(radar.get("x_m", width / 2))  # centred on the floor unless placed
+    rr, fov = float(radar["range_m"]), float(radar["fov_deg"])
     if not (0 <= rx <= width and rr > 0 and 0 < fov <= 180):
         raise ValueError("radar needs x_m in [0, width_m], range_m > 0, fov_deg in (0, 180]")
     return Venue(

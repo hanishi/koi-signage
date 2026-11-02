@@ -81,8 +81,8 @@ odd places.
 `screens` (default 3) is how many screens stand in the row. Each needs 3 zones, so `zone_cuts_m`
 has 3 × screens − 1 cuts, and `width_m` grows with the row: 4 screens at 3 m each is
 `screens = 4`, `width_m = 12.0`, `zone_cuts_m = [1, 2, …, 11]`. The pages, the screen sockets and
-the character all follow. One radar covers less of a longer row: move `[radar] x_m` to the
-middle and the floor page shows where it can't see.
+the character all follow, and so does the radar, which stays in the middle. One radar covers
+less of a longer row, and the floor page shows where it can't see.
 
 The server reads `$VENUE` if it is set, otherwise `venue.toml` in the directory it starts in,
 otherwise the defaults that ship with the package
@@ -98,8 +98,8 @@ Someone walking past along the far wall doesn't wake the character. The slider u
 changes it live for that page's connection. The floor shows the cut-off as a dashed line and dims
 anyone beyond it. Copy a value you like into `venue.toml`: a restart starts from the file again.
 
-`[radar]` is the LD2450's view: where it sits on the screen line, its range (6 m) and its field of
-view (120°, ±60° from straight out). Only what is inside that sector counts. The floor page
+`[radar]` is the LD2450's view: where it sits on the screen line (the middle of the floor unless
+`x_m` says otherwise), its range (6 m) and its field of view (120°, ±60° from straight out). Only what is inside that sector counts. The floor page
 shades everything outside it. With one sensor in the middle, people standing close to the side
 screens are out of its view: about 1.7 m out in front of the middle of screen 0 or 2 is the
 nearest it sees them.
