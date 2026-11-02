@@ -26,14 +26,22 @@ def until(ws: WebSocketTestSession, kind: str, limit: int = 50) -> dict[str, Any
     raise AssertionError(f"no {kind} frame within {limit}")
 
 
-def test_screen_gets_idle_on_connect() -> None:
+def synced(ws: WebSocketTestSession) -> None:
+    """What screen.js does on open: a ping, answered by a pong before any command."""
+    ws.send_json({"type": "ping", "c": 0.0})
+    assert ws.receive_json()["type"] == "pong"
+
+
+def test_screen_gets_idle_after_first_ping() -> None:
     with TestClient(create_app(V)) as client, client.websocket_connect("/ws/screen/0") as ws:
+        synced(ws)
         assert ws.receive_json() == {"type": "idle"}
 
 
 def test_floor_and_screen_follow() -> None:
     with TestClient(create_app(V)) as client:
         with client.websocket_connect("/ws/screen/1") as screen:
+            synced(screen)
             assert screen.receive_json() == {"type": "idle"}
             with client.websocket_connect("/ws/floor") as floor:
                 floor.send_json({"targets": [{"x": 4, "y": 1}]})

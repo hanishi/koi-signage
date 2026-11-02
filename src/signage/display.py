@@ -76,18 +76,32 @@ def display(
         character.tell(AttachScreen(n, ctx.self))
         ctx.watch_with(character, _CharacterGone())  # a new character means a fresh page
 
-        def on_message(_ctx: ActorContext[DisplayMsg], msg: DisplayMsg) -> Behavior[DisplayMsg]:
-            match msg:
-                case PageReady():
-                    character.tell(Ready(n))
-                case Ping(c):
-                    out.tell({"type": "pong", "c": c, "s": clock()})
-                case _CharacterGone():
-                    return Behaviors.stopped()
-                case _:
-                    out.tell(_json(msg))
-            return Behaviors.same
+        def run(held: tuple[ScreenCmd, ...] | None) -> Behavior[DisplayMsg]:
+            """``held``: commands kept until the page's first ping, None once it has one. Before
+            that the page has no offset, so a ``t`` would land days away on its clock."""
 
-        return Behaviors.receive(on_message)
+            def on_message(
+                _ctx: ActorContext[DisplayMsg], msg: DisplayMsg
+            ) -> Behavior[DisplayMsg]:
+                match msg:
+                    case PageReady():
+                        character.tell(Ready(n))
+                    case Ping(c):
+                        out.tell({"type": "pong", "c": c, "s": clock()})
+                        if held is not None:
+                            for cmd in held:
+                                out.tell(_json(cmd))
+                            return run(None)
+                    case _CharacterGone():
+                        return Behaviors.stopped()
+                    case _:
+                        if held is not None:
+                            return run((*held, msg))
+                        out.tell(_json(msg))
+                return Behaviors.same
+
+            return Behaviors.receive(on_message)
+
+        return run(())
 
     return Behaviors.setup(setup)

@@ -17,8 +17,12 @@ export function connectScreen(n, el) {
   const prepared = (on) => { el.classList.toggle("prepared", on); };
   const send = (frame) => { if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(frame)); };
   const ping = () => send({ type: "ping", c: now() });
+  // every t is now or now + handoff_lead_s on the venue clock: anything further means the
+  // offset is wrong, and running it at once beats a screen that stays blank
+  const MAX_AHEAD_MS = 2000;
   const at = (t, fn) => {
-    pending.push(setTimeout(fn, Math.max(0, (t - offset - now()) * 1000)));
+    const ms = (t - offset - now()) * 1000;
+    pending.push(setTimeout(fn, ms > MAX_AHEAD_MS ? 0 : Math.max(0, ms)));
   };
 
   function open() {

@@ -24,9 +24,25 @@ async def test_attaches_on_start() -> None:
         await spawned(testkit)  # asserts AttachScreen(2, ref)
 
 
+async def test_commands_held_until_first_ping() -> None:
+    """A page can't place ``t`` on its own clock before it has an offset, so nothing goes out
+    before its first ping is answered: the pong first, then what was held."""
+    async with ActorTestKit() as testkit:
+        _, out, ref = await spawned(testkit)
+        ref.tell(Enter(2.5))
+        await out.expect_no_message(0.05)
+        ref.tell(Ping(1.0))
+        assert await out.receive_messages(2) == [
+            {"type": "pong", "c": 1.0, "s": 42.0},
+            {"type": "enter", "t": 2.5},
+        ]
+
+
 async def test_commands_to_json() -> None:
     async with ActorTestKit() as testkit:
         _, out, ref = await spawned(testkit)
+        ref.tell(Ping(0.0))
+        await out.receive_message()
         for cmd in (Idle(), Prepare(), Cancel(), Enter(2.5), Exit(3.0)):
             ref.tell(cmd)
         assert await out.receive_messages(5) == [
