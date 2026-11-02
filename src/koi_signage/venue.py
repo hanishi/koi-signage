@@ -11,7 +11,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ZONES_PER_SCREEN = 3
-SCREENS = 3
 DEFAULT_VENUE = Path(__file__).with_name("venue.toml")  # the defaults the package ships
 
 
@@ -25,6 +24,7 @@ class Target:
 
 @dataclass(frozen=True)
 class Venue:
+    screens: int
     width_m: float
     depth_m: float
     zone_cuts_m: tuple[float, ...]
@@ -43,25 +43,31 @@ class Venue:
 
 
 def load_venue(path: Path) -> Venue:
-    """Read ``venue.toml``. Raises ValueError unless there are 8 strictly increasing zone cuts,
-    all inside the floor, max_distance_m is in (0, depth_m], and the radar is on the screen line
-    with a positive range and a field of view in (0, 180]."""
+    """Read ``venue.toml``. Raises ValueError unless ``screens`` is a positive whole number with
+    3 × screens − 1 strictly increasing zone cuts, all inside the floor, max_distance_m is in
+    (0, depth_m], and the radar is on the screen line with a positive range and a field of view
+    in (0, 180]."""
     with path.open("rb") as f:
         doc = tomllib.load(f)
     floor, ch, radar = doc["floor"], doc["character"], doc["radar"]
+    screens = floor["screens"]
+    if isinstance(screens, bool) or not isinstance(screens, int) or screens < 1:
+        raise ValueError("screens must be a whole number, at least 1")
     width = float(floor["width_m"])
     cuts = tuple(float(c) for c in floor["zone_cuts_m"])
-    if len(cuts) != ZONES_PER_SCREEN * SCREENS - 1:
-        raise ValueError(f"zone_cuts_m needs {ZONES_PER_SCREEN * SCREENS - 1} cuts")
+    if len(cuts) != ZONES_PER_SCREEN * screens - 1:
+        raise ValueError(f"{screens} screens need {ZONES_PER_SCREEN * screens - 1} zone cuts")
     if any(a >= b for a, b in zip((0.0, *cuts), (*cuts, width))):
         raise ValueError("zone_cuts_m must increase strictly, inside (0, width_m)")
     depth, reach = float(floor["depth_m"]), float(floor["max_distance_m"])
     if not 0 < reach <= depth:
         raise ValueError("max_distance_m must be in (0, depth_m]")
-    rx, rr, fov = float(radar["x_m"]), float(radar["range_m"]), float(radar["fov_deg"])
+    rx = float(radar.get("x_m", width / 2))  # centred on the floor unless placed
+    rr, fov = float(radar["range_m"]), float(radar["fov_deg"])
     if not (0 <= rx <= width and rr > 0 and 0 < fov <= 180):
         raise ValueError("radar needs x_m in [0, width_m], range_m > 0, fov_deg in (0, 180]")
     return Venue(
+        screens=screens,
         width_m=width,
         depth_m=depth,
         zone_cuts_m=cuts,
@@ -97,13 +103,14 @@ def screen_of(v: Venue, x: float) -> int:
     return zone_of(v, x) // ZONES_PER_SCREEN
 
 
-def boundaries(v: Venue) -> tuple[float, float]:
-    """The x of the boundary between screens 0 and 1, and between 1 and 2."""
-    return v.zone_cuts_m[ZONES_PER_SCREEN - 1], v.zone_cuts_m[2 * ZONES_PER_SCREEN - 1]
+def boundaries(v: Venue) -> tuple[float, ...]:
+    """The x of each boundary between neighbouring screens: item n is between n and n + 1."""
+    return v.zone_cuts_m[ZONES_PER_SCREEN - 1 :: ZONES_PER_SCREEN]
 
 
-def screen_counts(v: Venue, targets: Sequence[Target]) -> tuple[int, int, int]:
-    counts = [0] * SCREENS
+def screen_counts(v: Venue, targets: Sequence[Target]) -> tuple[int, ...]:
+    """How many people stand in front of each screen."""
+    counts = [0] * v.screens
     for t in targets:
         counts[screen_of(v, t.x)] += 1
-    return counts[0], counts[1], counts[2]
+    return tuple(counts)

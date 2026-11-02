@@ -8,7 +8,7 @@
   :root { color-scheme: dark; --bg: #0a0d12; --line: #2a3140; --edge: #4f8cff; --text: #c9d2de; --muted: #7a8596; }
   body { margin: 0; padding: 16px; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, sans-serif; }
   main { max-width: 1100px; margin: 0 auto; display: grid; gap: 12px; }
-  .screens { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .screens { display: grid; grid-template-columns: repeat(var(--screens, 3), 1fr); gap: 8px; }
   .screens .screen { aspect-ratio: 16 / 10; border-radius: 6px; }
   .label { color: var(--muted); font-size: 12px; text-align: center; }
   #floor { position: relative; background: #0f131a; border: 1px solid var(--line); border-radius: 6px;
@@ -49,13 +49,10 @@
 <main>
   <div id="devices">
     <span>Screens as windows:</span>
-    <button type="button" data-screen="0">Screen 0</button>
-    <button type="button" data-screen="1">Screen 1</button>
-    <button type="button" data-screen="2">Screen 2</button>
     <a id="layout" href="/?screens=off">Floor only</a>
   </div>
   <div class="screens" id="screens"></div>
-  <div class="screens"><div class="label">screen 0</div><div class="label">screen 1</div><div class="label">screen 2</div></div>
+  <div class="screens" id="labels"></div>
   <div id="floor"></div>
   <label id="reach-control">Ignore people further than
     <input type="range" id="reach" min="0" step="0.1" disabled>
@@ -75,15 +72,22 @@
   document.head.append(Object.assign(document.createElement("style"), { textContent: SCREEN_CSS }));
 
   // ?screens=off: this page is only the floor (the radar), and the screens run in their own
-  // windows or on devices. Otherwise the three screens show here too, mirrored.
+  // windows or on devices. Otherwise every screen shows here too, mirrored.
   const floorOnly = new URLSearchParams(location.search).get("screens") === "off";
   document.body.classList.toggle("floor-only", floorOnly);
   const layout = document.getElementById("layout");
   layout.href = floorOnly ? "/" : "/?screens=off";
   layout.textContent = floorOnly ? "Show screens here" : "Floor only";
+  const venue = await (await fetch("/venue")).json();
+  const screens = venue.screens;  // side by side, numbered from the left
+  document.documentElement.style.setProperty("--screens", screens);
+  const labels = document.getElementById("labels");
+  for (let n = 0; n < screens; n++) {
+    labels.append(Object.assign(document.createElement("div"), { className: "label", textContent: `screen ${n}` }));
+  }
   if (!floorOnly) {
     const row = document.getElementById("screens");
-    for (let n = 0; n < 3; n++) {
+    for (let n = 0; n < screens; n++) {
       const el = screenElement();
       row.append(el);
       connectScreen(n, el);
@@ -93,10 +97,12 @@
   // One window per screen, side by side across the top of the display. One button each: a
   // click may open only one popup. The window name brings an open one to the front instead of
   // opening a second.
-  for (const button of document.querySelectorAll("#devices button")) {
+  const layoutLink = document.getElementById("layout");
+  for (let n = 0; n < screens; n++) {
+    const button = Object.assign(document.createElement("button"), { type: "button", textContent: `Screen ${n}` });
+    layoutLink.before(button);
     button.addEventListener("click", () => {
-      const n = Number(button.dataset.screen);
-      const width = Math.floor(screen.availWidth / 3);
+      const width = Math.floor(screen.availWidth / screens);
       const height = Math.round((width * 10) / 16);
       const left = (screen.availLeft ?? 0) + n * width;
       const top = screen.availTop ?? 0;
@@ -106,12 +112,11 @@
     });
   }
 
-  const venue = await (await fetch("/venue")).json();
   const floorEl = document.getElementById("floor");
   floorEl.style.aspectRatio = `${venue.width_m} / ${venue.depth_m}`;
   venue.zone_cuts_m.forEach((x, i) => {
     const cut = document.createElement("div");
-    cut.className = (i === 2 || i === 5) ? "cut edge" : "cut";  // screen boundaries
+    cut.className = i % 3 === 2 ? "cut edge" : "cut";  // every third cut is a screen boundary
     cut.style.left = `${(x / venue.width_m) * 100}%`;
     floorEl.append(cut);
   });
@@ -151,7 +156,7 @@
   // it facing out from the screens. A point on a screen boundary belongs to the screen on its
   // right, as on the server.
   const metresText = (v) => `${v.toFixed(2)} m`;
-  const screenOf = (x) => (x < venue.zone_cuts_m[2] ? 0 : x < venue.zone_cuts_m[5] ? 1 : 2);
+  const screenOf = (x) => Math.floor(venue.zone_cuts_m.filter((c) => c <= x).length / 3);
 
   for (let m = 1; m < venue.depth_m; m++) {  // a distance scale on the floor's right edge
     const r = document.createElement("div");

@@ -2,7 +2,7 @@
 
 from collections.abc import AsyncGenerator, Sequence
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from ohra import ActorRef
@@ -20,9 +20,11 @@ from koi_signage.messages import (
     Status,
     Target,
 )
-from koi_signage.venue import DEFAULT_VENUE, load_venue
+from koi_signage.venue import DEFAULT_VENUE, Venue, load_venue
 
 V = load_venue(DEFAULT_VENUE)
+# four screens along 12 m of corridor, 3 m each, boundaries at 3, 6 and 9
+V4 = replace(V, screens=4, width_m=12.0, zone_cuts_m=tuple(float(c) for c in range(1, 12)))
 
 
 def people(*xs: float) -> Frame:
@@ -66,11 +68,13 @@ class Rig:
 
 
 @asynccontextmanager
-async def rig(attach: Sequence[int] = (0, 1, 2)) -> AsyncGenerator[Rig]:
+async def rig(attach: Sequence[int] = (0, 1, 2), venue: Venue = V) -> AsyncGenerator[Rig]:
     async with ActorTestKit(manual_time=True) as testkit:
         time = ManualTime(testkit.system)
-        ref = testkit.spawn(character(V, clock=lambda: time.scheduler.current_time))
-        screens: list[TestProbe[ScreenCmd]] = [testkit.create_test_probe() for _ in range(3)]
+        ref = testkit.spawn(character(venue, clock=lambda: time.scheduler.current_time))
+        screens: list[TestProbe[ScreenCmd]] = [
+            testkit.create_test_probe() for _ in range(venue.screens)
+        ]
         floor: TestProbe[Status] = testkit.create_test_probe()
         ref.tell(AttachFloor(floor.ref))
         await floor.expect_message(Status("idle", 0, 1))

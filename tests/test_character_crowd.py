@@ -1,5 +1,5 @@
 from koi_signage.messages import Enter, Exit, Prepare, Ready, Status
-from util import Rig, people, rig
+from util import V4, Rig, people, rig
 
 
 async def crowd(r: Rig) -> None:
@@ -64,3 +64,12 @@ async def test_leader_change_restarts_lead() -> None:
             await s.expect_no_message(0)
         await r.time.time_passes(0.4)
         await r.screens[0].expect_message(Prepare())
+
+
+async def test_four_screens_crowd_moves_one_screen_toward_the_leader() -> None:
+    async with rig(attach=(0, 1, 2, 3), venue=V4) as r:
+        await crowd(r)
+        r.ref.tell(people(10.0, 10.5))  # screen 3 leads, two screens away
+        await r.time.time_passes(1.0)
+        await hop(r, 1, 2)
+        await r.screens[3].expect_no_message(0)
