@@ -2,9 +2,17 @@ from pathlib import Path
 
 import pytest
 
-from koi_signage.venue import Target, boundaries, load_venue, screen_counts, screen_of, zone_of
+from koi_signage.venue import (
+    DEFAULT_VENUE,
+    Target,
+    boundaries,
+    load_venue,
+    screen_counts,
+    screen_of,
+    zone_of,
+)
 
-V = load_venue(Path(__file__).parent.parent / "venue.toml")
+V = load_venue(DEFAULT_VENUE)
 
 
 def test_loads_repo_venue() -> None:
@@ -24,7 +32,7 @@ def test_screen_counts() -> None:
     assert screen_counts(V, [Target(0.5, 1), Target(4, 1), Target(4.5, 2)]) == (1, 2, 0)
 
 
-GOOD = Path(__file__).parent.parent.joinpath("venue.toml").read_text()
+GOOD = DEFAULT_VENUE.read_text()
 
 
 @pytest.mark.parametrize(

@@ -34,7 +34,7 @@ page or `koi.js`, restart it to see the change.
 - **Wait on a condition, not a duration.**
   - Use `TestProbe` as screens, floors and the character.
   - Use `ManualTime` for every threshold: `tests/util.py`'s `rig()` gives you a character on
-    the repo's `venue.toml`, on a manual clock, with probes attached.
+    the packaged `venue.toml`, on a manual clock, with probes attached.
 - **Assert on messages.** Character decides everything, so most behaviour is "these frames in,
   these commands out". `follow_step` and `venue.py` are pure functions; test them directly.
 

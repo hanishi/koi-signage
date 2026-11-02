@@ -44,8 +44,8 @@ build step.
 ```
 koi-signage/
   pyproject.toml
-  venue.toml               # calibration: floor size, zone cuts, thresholds
   src/koi_signage/
+    venue.toml             # default calibration: floor size, zone cuts, radar, thresholds
     venue.py               # Venue config: load from TOML, zone/screen lookup
     messages.py            # Frame, Target, and every message between actors
     character.py           # the state machine: the only actor that decides

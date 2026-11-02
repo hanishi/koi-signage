@@ -12,6 +12,7 @@ from pathlib import Path
 
 ZONES_PER_SCREEN = 3
 SCREENS = 3
+DEFAULT_VENUE = Path(__file__).with_name("venue.toml")  # the defaults the package ships
 
 
 @dataclass(frozen=True)

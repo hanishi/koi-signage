@@ -19,7 +19,7 @@ from ohra.ext.fastapi import Actors
 from koi_signage.character import CharacterMsg, character
 from koi_signage.display import decode_screen, display
 from koi_signage.floor import decode_floor, floor
-from koi_signage.venue import SCREENS, Venue, load_venue
+from koi_signage.venue import DEFAULT_VENUE, SCREENS, Venue, load_venue
 
 STATIC = Path(__file__).parent / "static"
 
@@ -131,5 +131,8 @@ def create_app(venue: Venue) -> FastAPI:
 
 
 def from_env() -> FastAPI:
-    """The app uvicorn starts (``--factory``), on ``$VENUE`` (default ``venue.toml``)."""
-    return create_app(load_venue(Path(os.environ.get("VENUE", "venue.toml"))))
+    """The app uvicorn starts (``--factory``), on ``$VENUE`` if set, else ``./venue.toml`` if
+    there is one, else the defaults the package ships."""
+    here = Path("venue.toml")
+    path = os.environ.get("VENUE") or (here if here.exists() else DEFAULT_VENUE)
+    return create_app(load_venue(Path(path)))

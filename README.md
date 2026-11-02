@@ -75,8 +75,16 @@ The LD2450 actor will replace Floor and send the same `Frame`. The
 ## Calibration
 
 `venue.toml` holds the floor size, the zone cuts (3 zones per screen) and every threshold. They
-are set per site, because a real radar reads off and real people stand in odd places. `$VENUE`
-points at another file.
+are set per site, because a real radar reads off and real people stand in odd places.
+
+The server reads `$VENUE` if it is set, otherwise `venue.toml` in the directory it starts in,
+otherwise the defaults that ship with the package
+([`src/koi_signage/venue.toml`](src/koi_signage/venue.toml)). To make your own, copy the
+defaults and edit them:
+
+```
+cp "$(python -c 'from koi_signage.venue import DEFAULT_VENUE; print(DEFAULT_VENUE)')" venue.toml
+```
 
 `max_distance_m` (default 3 m) is how far from the screens someone can be and still count.
 Someone walking past along the far wall doesn't wake the character. The slider under the floor

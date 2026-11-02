@@ -1,5 +1,6 @@
 """The app over its WebSockets, and the guardian's respawn."""
 
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -9,9 +10,10 @@ from ohra import ActorRef, Behavior, Behaviors
 from ohra.testkit import ActorTestKit, TestProbe
 from starlette.testclient import WebSocketTestSession
 
-from koi_signage.app import GetCharacter, create_app, guardian
+from koi_signage.app import GetCharacter, create_app, from_env, guardian
 from koi_signage.character import CharacterMsg
 from koi_signage.messages import Frame
+from koi_signage.venue import DEFAULT_VENUE
 from util import V
 
 
@@ -104,3 +106,31 @@ async def test_guardian_respawns_character() -> None:
         second = await replies.receive_message()
         assert second != first
         await watcher.expect_no_message(0.05)  # alive: not terminated
+
+
+def depth_served() -> float:
+    with TestClient(from_env()) as client:
+        return client.get("/venue").json()["depth_m"]
+
+
+def test_from_env_falls_back_to_the_packaged_venue(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Installed from PyPI and run from an empty directory, it still starts."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("VENUE", raising=False)
+    assert depth_served() == V.depth_m
+
+
+def test_from_env_prefers_venue_toml_here_then_dollar_venue(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("VENUE", raising=False)
+    here = DEFAULT_VENUE.read_text().replace("depth_m = 4.0", "depth_m = 5.0")
+    (tmp_path / "venue.toml").write_text(here)
+    assert depth_served() == 5.0
+    other = tmp_path / "other.toml"
+    other.write_text(here.replace("depth_m = 5.0", "depth_m = 6.0"))
+    monkeypatch.setenv("VENUE", str(other))
+    assert depth_served() == 6.0

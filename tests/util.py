@@ -3,7 +3,6 @@
 from collections.abc import AsyncGenerator, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
 from ohra import ActorRef
@@ -21,9 +20,9 @@ from koi_signage.messages import (
     Status,
     Target,
 )
-from koi_signage.venue import load_venue
+from koi_signage.venue import DEFAULT_VENUE, load_venue
 
-V = load_venue(Path(__file__).parent.parent / "venue.toml")
+V = load_venue(DEFAULT_VENUE)
 
 
 def people(*xs: float) -> Frame:
