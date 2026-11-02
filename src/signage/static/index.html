@@ -18,6 +18,15 @@
   .dot { position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%;
     background: #e8edf4; pointer-events: none; }
   .dot.pointer { background: none; border: 2px solid #ffd166; }
+  .tag { position: absolute; transform: translate(12px, -50%); pointer-events: none; white-space: nowrap;
+    font: 600 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text);
+    background: #0a0d12cc; padding: 3px 5px; border-radius: 4px; }
+  .tag.pointer { color: #ffd166; }
+  .ruler { position: absolute; right: 6px; transform: translateY(-50%); pointer-events: none;
+    font: 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); }
+  #people { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; color: var(--muted);
+    font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  #people b { color: var(--text); font-weight: 600; }
   #status { display: flex; gap: 16px; color: var(--muted); }
   #status b { color: var(--text); font-weight: 600; }
   #devices { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--muted); }
@@ -42,8 +51,10 @@
   <div id="floor"></div>
   <div id="status">
     <span>mode <b id="mode">–</b></span><span>people <b id="count">–</b></span>
-    <span>screen <b id="screen">–</b></span><span id="link">floor offline</span>
+    <span>screen <b id="screen">–</b></span><span>nearest <b id="nearest">–</b></span>
+    <span id="link">floor offline</span>
   </div>
+  <ul id="people"></ul>
   <p class="label">Move the pointer over the floor to walk in. Click to leave someone standing (two at most, three with the pointer, as the radar tracks three). Move off the floor to leave.</p>
 </main>
 <script type="module">
@@ -104,15 +115,46 @@
   };
   const targets = () => [...(pointer ? [pointer] : []), ...standing];
 
+  // Distance is y: metres from the screens, 0 at the floor's top edge, as the LD2450 reports
+  // it facing out from the screens. A point on a screen boundary belongs to the screen on its
+  // right, as on the server.
+  const metresText = (v) => `${v.toFixed(2)} m`;
+  const screenOf = (x) => (x < venue.zone_cuts_m[2] ? 0 : x < venue.zone_cuts_m[5] ? 1 : 2);
+
+  for (let m = 1; m < venue.depth_m; m++) {  // a distance scale on the floor's right edge
+    const r = document.createElement("div");
+    r.className = "ruler";
+    r.style.top = `${(m / venue.depth_m) * 100}%`;
+    r.textContent = `${m} m`;
+    floorEl.append(r);
+  }
+
   function draw() {
-    floorEl.querySelectorAll(".dot").forEach((d) => d.remove());
-    for (const [p, cls] of [...standing.map((p) => [p, "dot"]), ...(pointer ? [[pointer, "dot pointer"]] : [])]) {
+    floorEl.querySelectorAll(".dot, .tag").forEach((d) => d.remove());
+    const people = [...(pointer ? [[pointer, "pointer"]] : []), ...standing.map((p) => [p, ""])];
+    for (const [p, kind] of people) {
+      const left = `${(p.x / venue.width_m) * 100}%`;
+      const top = `${(p.y / venue.depth_m) * 100}%`;
       const d = document.createElement("div");
-      d.className = cls;
-      d.style.left = `${(p.x / venue.width_m) * 100}%`;
-      d.style.top = `${(p.y / venue.depth_m) * 100}%`;
-      floorEl.append(d);
+      d.className = `dot ${kind}`;
+      d.style.left = left;
+      d.style.top = top;
+      const tag = document.createElement("div");
+      tag.className = `tag ${kind}`;
+      tag.style.left = left;
+      tag.style.top = top;
+      tag.textContent = metresText(p.y);
+      floorEl.append(d, tag);
     }
+    const list = document.getElementById("people");
+    list.replaceChildren(...people.map(([p, kind], i) => {
+      const li = document.createElement("li");
+      const who = kind === "pointer" ? "pointer" : `standing ${i + (pointer ? 0 : 1)}`;
+      li.innerHTML = `${who}: <b>${metresText(p.y)}</b> away · x ${metresText(p.x)} · screen ${screenOf(p.x)}`;
+      return li;
+    }));
+    const nearest = people.length ? Math.min(...people.map(([p]) => p.y)) : null;
+    document.getElementById("nearest").textContent = nearest === null ? "–" : metresText(nearest);
   }
 
   let ws;
