@@ -145,11 +145,11 @@ wheels = [
 
 [[package]]
 name = "ohra"
-version = "0.5.0"
+version = "0.5.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/fd/df/0008438b533818bdccf51eb228c55256a177296742679a904c5911ce0a0d/ohra-0.5.0.tar.gz", hash = "sha256:d20404c6acb737dca62ef9a2ed431e64b6bd58ce6d5327ae8d823f878711859a", size = 213344, upload-time = "2026-10-31T13:19:55.627Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c5/b3/d3a2c8bbb96a6eb2b3b7e009a399bc90a1253768490dfb9c53577954d41b/ohra-0.5.1.tar.gz", hash = "sha256:d16694d94bd2d65b95f256a89acc91cc82e5f64aa885ae57c664cecd8eb8979f", size = 213629, upload-time = "2026-11-02T12:30:37.411Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/21/04/6b1237e74a43310c59628ae0ddd74ac5d829b6b3c7d080fed2c1926eb010/ohra-0.5.0-py3-none-any.whl", hash = "sha256:77097d353608757976fa29f904e1c2147057c6c1cd06b78954ee146bd76ff1d5", size = 187557, upload-time = "2026-10-31T13:19:54.049Z" },
+    { url = "https://files.pythonhosted.org/packages/46/ad/9ece6d536030691c0724a9f73d456ff24aff03346581182da11b7a336e39/ohra-0.5.1-py3-none-any.whl", hash = "sha256:0b049939c91b323ae076a240dcb54624d7ee9ed5e3620f6730de08eacfdf8c41", size = 187630, upload-time = "2026-11-02T12:30:36.069Z" },
 ]
 
 [package.optional-dependencies]
@@ -406,7 +406,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "httpx2", marker = "extra == 'dev'" },
-    { name = "ohra", extras = ["web"], specifier = ">=0.5" },
+    { name = "ohra", extras = ["web"], specifier = ">=0.5.1" },
     { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1.380" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24" },

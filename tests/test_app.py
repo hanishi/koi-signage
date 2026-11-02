@@ -1,6 +1,5 @@
 """The app over its WebSockets, and the guardian's respawn."""
 
-import contextlib
 from typing import Any
 
 import pytest
@@ -9,7 +8,6 @@ from fastapi.testclient import TestClient
 from ohra import ActorRef, Behavior, Behaviors
 from ohra.testkit import ActorTestKit, TestProbe
 from starlette.testclient import WebSocketTestSession
-from starlette.websockets import WebSocketDisconnected
 
 from signage.app import GetCharacter, create_app, guardian
 from signage.character import CharacterMsg
@@ -76,19 +74,11 @@ def test_bad_screen_index_rejected() -> None:
 
 
 def test_bad_floor_frame_closes_1003() -> None:
-    # ohra 0.5.0 bug: a frame the floor tells as the 1003 close goes out makes send() raise
-    # starlette's send-after-close error out of the route. The socket still closes with 1003; the
-    # server logs a traceback. Fixed in ohra's websocket-send-after-close branch (3293174): drop
-    # the suppress once signage depends on an ohra release with it.
-    with (
-        TestClient(create_app(V)) as client,
-        contextlib.suppress(WebSocketDisconnected),
-        client.websocket_connect("/ws/floor") as ws,
-    ):
+    with TestClient(create_app(V)) as client, client.websocket_connect("/ws/floor") as ws:
         ws.send_text("nope")
         with pytest.raises(WebSocketDisconnect) as closed:
             until(ws, "never")
-        assert closed.value.code == 1003
+    assert closed.value.code == 1003
 
 
 def crashing() -> Behavior[CharacterMsg]:
