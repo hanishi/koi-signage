@@ -110,6 +110,17 @@ floor page ──ws──▶ Floor (sensor) ──Frame @10fps──▶ Characte
 `actors.websocket` spawns connection actors under the root, not under the guardian. That is why
 they register with Character instead of being its children.
 
+Against the article's tree:
+
+| Article | Here | Why |
+|---|---|---|
+| VenueActor | guardian | spawns, watches and respawns Character |
+| SensorActor | Floor (connection actor) | the pointer arrives over a socket. The LD2450 actor will be a guardian child under `restart_with_backoff` |
+| TrackingActor | pure functions in `venue.py` | no state yet. It becomes an actor when smoothing or standing-person memory needs state |
+| CharacterActor | Character, a guardian child | |
+| DisplayActor ×3 | Display (connection actors) | each lives exactly as long as its tablet's socket |
+| UplinkActor | not in v1 | arrives with the Promovolve contract, as a guardian child with a persisted Outbox |
+
 ## Character
 
 State: `mode ∈ {Idle, Follow, Crowd}`, `screen` (0..2, starting at 1, the middle), the attached
