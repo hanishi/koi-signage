@@ -26,8 +26,13 @@ uv run uvicorn --factory signage.app:from_env --host 0.0.0.0 --port 8124
   - Move the pointer over the floor to walk in.
   - Click to leave someone standing.
   - Move off the floor to leave.
+- **http://localhost:8124/?screens=off** is the floor alone. Its **Screen 0/1/2** buttons open
+  each screen as its own window, side by side, so three windows stand in for the three tablets.
+  This is good for the character's logic and for demos. All three windows share one clock, so
+  sync and latency look perfect here.
 - **http://&lt;pi&gt;:8124/screen?n=0** (and `1`, `2`) is one screen, full-window, for a tablet's
-  kiosk browser.
+  kiosk browser. Any phone, tablet or laptop on the same Wi-Fi works. Separate devices are what
+  the sync, latency and kiosk checks need.
 
 `--host 0.0.0.0` lets tablets on the LAN connect. Use `127.0.0.1` to keep it on this machine.
 

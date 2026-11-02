@@ -20,10 +20,23 @@
   .dot.pointer { background: none; border: 2px solid #ffd166; }
   #status { display: flex; gap: 16px; color: var(--muted); }
   #status b { color: var(--text); font-weight: 600; }
+  #devices { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--muted); }
+  #devices button { font: inherit; color: var(--text); background: #161b24; border: 1px solid var(--line);
+    border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+  #devices button:hover { border-color: var(--edge); }
+  #devices a { color: var(--edge); margin-left: auto; }
+  body.floor-only .screens { display: none; }
 </style>
 </head>
 <body>
 <main>
+  <div id="devices">
+    <span>Screens as windows:</span>
+    <button type="button" data-screen="0">Screen 0</button>
+    <button type="button" data-screen="1">Screen 1</button>
+    <button type="button" data-screen="2">Screen 2</button>
+    <a id="layout" href="/?screens=off">Floor only</a>
+  </div>
   <div class="screens" id="screens"></div>
   <div class="screens"><div class="label">screen 0</div><div class="label">screen 1</div><div class="label">screen 2</div></div>
   <div id="floor"></div>
@@ -37,11 +50,37 @@
   import { connectScreen, screenElement, SCREEN_CSS } from "/static/screen.js";
 
   document.head.append(Object.assign(document.createElement("style"), { textContent: SCREEN_CSS }));
-  const row = document.getElementById("screens");
-  for (let n = 0; n < 3; n++) {
-    const el = screenElement();
-    row.append(el);
-    connectScreen(n, el);
+
+  // ?screens=off: this page is only the floor (the radar), and the screens run in their own
+  // windows or on devices. Otherwise the three screens show here too, mirrored.
+  const floorOnly = new URLSearchParams(location.search).get("screens") === "off";
+  document.body.classList.toggle("floor-only", floorOnly);
+  const layout = document.getElementById("layout");
+  layout.href = floorOnly ? "/" : "/?screens=off";
+  layout.textContent = floorOnly ? "Show screens here" : "Floor only";
+  if (!floorOnly) {
+    const row = document.getElementById("screens");
+    for (let n = 0; n < 3; n++) {
+      const el = screenElement();
+      row.append(el);
+      connectScreen(n, el);
+    }
+  }
+
+  // One window per screen, side by side across the top of the display. One button each: a
+  // click may open only one popup. The window name brings an open one to the front instead of
+  // opening a second.
+  for (const button of document.querySelectorAll("#devices button")) {
+    button.addEventListener("click", () => {
+      const n = Number(button.dataset.screen);
+      const width = Math.floor(screen.availWidth / 3);
+      const height = Math.round((width * 10) / 16);
+      const left = (screen.availLeft ?? 0) + n * width;
+      const top = screen.availTop ?? 0;
+      const w = window.open(`/screen?n=${n}`, `screen-${n}`,
+        `popup,left=${left},top=${top},width=${width},height=${height}`);
+      w?.focus();
+    });
   }
 
   const venue = await (await fetch("/venue")).json();
