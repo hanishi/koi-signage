@@ -79,6 +79,7 @@ crowd_lead_s = 1.0      # a screen must lead this long before the character move
 linger_s = 3.0          # after arriving in crowd mode, stay at least this long
 dead_zone_m = 0.3       # half-width of the band around a screen boundary
 handoff_lead_s = 0.15   # exit/enter time t = now + this
+ready_timeout_s = 1.0   # a screen that hasn't sent ready by then is handed off to anyway
 ```
 
 Screen `s` covers zones `3s .. 3s+2`. The screen boundaries are the 3rd and 6th zone cuts.
@@ -91,8 +92,9 @@ floor page ──ws──▶ Floor (sensor) ──Frame @10fps──▶ Characte
                        └──────────Status───────────────┘  └───────────Attach / Ready────────────────┘
 ```
 
-- **Guardian** (app.py) spawns Character under restart supervision and answers `GetCharacter`.
-  The routes ask it once per connection, as restock does with `Connect`.
+- **Guardian** (app.py) spawns Character, watches it, and answers `GetCharacter`. The routes ask
+  it once per connection, as restock does with `Connect`. If Character has stopped, the guardian
+  spawns a fresh one.
 - **Floor** is the connection actor for `/ws/floor`. The page sends the current targets
   `{targets: [{x, y}, ...]}` whenever the pointer moves or a click adds or removes a person. The
   actor keeps the latest set and emits a `Frame` to Character on a 100 ms timer, whether or not
@@ -110,8 +112,8 @@ they register with Character instead of being its children.
 
 ## Character
 
-State: `mode ∈ {Idle, Follow, Crowd}`, `screen` (0..2), the attached displays, and handoff and
-timer bookkeeping. Every rule below runs on ohra timers, so ManualTime drives it in tests.
+State: `mode ∈ {Idle, Follow, Crowd}`, `screen` (0..2, starting at 1, the middle), the attached
+displays, and handoff and timer bookkeeping. Every rule below runs on ohra timers, so ManualTime drives it in tests.
 
 **Mode switching.** For each `Frame`, `seen = min(count, 2)` (0, 1, or 2+). If `seen` would mean
 a different mode, a single timer `Settle(seen)` starts with that mode's threshold. A different
@@ -134,7 +136,7 @@ the character has spent `linger_s` on its current screen, the character moves **
 toward it. A tie means no leader, so the character stays.
 
 **Handoff** from `s` to `s'`. The character sends `Prepare` to `s'` if it hasn't yet, and waits
-for `Ready(s')`. Then, with `t = clock() + handoff_lead_s`, it sends `Exit(t)` to `s` and
+for `Ready(s')`, or for `ready_timeout_s`, whichever comes first. Then, with `t = clock() + handoff_lead_s`, it sends `Exit(t)` to `s` and
 `Enter(t)` to `s'`. `clock` is a parameter (default `time.monotonic`, so NTP steps can't move it),
 which keeps it testable. If `s'` has no display attached, the character moves anyway and the
 `Enter` is dropped.
@@ -162,8 +164,10 @@ After any change, the character sends `Status(mode, count, screen)` to the Floor
 
 - A bad frame from a page: `decode` raises, `actors.websocket` closes with 1003, and the page
   reconnects.
-- A Character crash: the guardian restarts it, and displays and the floor re-attach when their
-  pages reconnect.
+- A Character crash: it stops instead of restarting. A restart would keep the same ref, so no page
+  would reconnect, and the restarted Character would have no screens. Every connection actor
+  watches Character, so they stop and close their sockets. The pages reconnect, and the guardian
+  spawns a fresh Character for them.
 - A tablet drop: DeathWatch (above). Its page reconnects with backoff.
 
 ## Testing
