@@ -20,6 +20,7 @@ __all__ = [
     "Prepare",
     "Ready",
     "ScreenCmd",
+    "Sensed",
     "Status",
     "Target",
 ]
@@ -95,3 +96,12 @@ class Status:
 @dataclass(frozen=True)
 class AttachFloor:
     ref: ActorRef[Status]
+
+
+@dataclass(frozen=True)
+class Sensed:
+    """A Frame from one floor page. Only the newest floor page drives the character; the radar
+    sends plain Frames."""
+
+    floor: ActorRef[Status]
+    frame: Frame

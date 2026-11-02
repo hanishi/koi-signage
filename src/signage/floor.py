@@ -13,7 +13,7 @@ from typing import Any, cast
 from ohra import ActorContext, ActorRef, Behavior, Behaviors
 
 from signage.character import CharacterMsg
-from signage.messages import AttachFloor, Frame, Status, Target
+from signage.messages import AttachFloor, Frame, Sensed, Status, Target
 from signage.venue import Venue
 
 MAX_TARGETS = 3  # the LD2450 tracks at most 3 people
@@ -84,7 +84,7 @@ def floor(
                     case Pointer(targets):
                         return run(clamp(venue, targets))
                     case _Tick():
-                        character.tell(Frame(latest))
+                        character.tell(Sensed(ctx.self, Frame(latest)))
                         return Behaviors.same
                     case Status(mode, count, screen):
                         out.tell(

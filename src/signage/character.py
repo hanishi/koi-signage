@@ -22,6 +22,7 @@ from signage.messages import (
     Prepare,
     Ready,
     ScreenCmd,
+    Sensed,
     Status,
 )
 from signage.venue import SCREENS, Venue, boundaries, screen_counts
@@ -60,6 +61,7 @@ class _LeadDone:
 
 type CharacterMsg = (
     Frame
+    | Sensed
     | AttachScreen
     | Ready
     | AttachFloor
@@ -79,12 +81,14 @@ class _State:
     mode: Mode = "idle"
     screen: int = 1
     count: int = 0
-    screens: Mapping[int, ActorRef[ScreenCmd]] = field(
-        default_factory=dict[int, ActorRef[ScreenCmd]]
+    # every page showing screen n gets its commands: a tablet and the laptop's view, say
+    screens: Mapping[int, tuple[ActorRef[ScreenCmd], ...]] = field(
+        default_factory=dict[int, tuple[ActorRef[ScreenCmd], ...]]
     )
-    floor: ActorRef[Status] | None = None
+    # every floor page gets Status; only the newest one's frames drive the character
+    floors: tuple[ActorRef[Status], ...] = ()
     settling: int | None = None  # the `seen` the settle timer is running for
-    shown: Status | None = None  # the last Status the floor got
+    shown: Status | None = None  # the last Status the floors got
     prepared: int | None = None  # the screen told Prepare
     ready: int | None = None  # the prepared screen, once it answered Ready
     moving: int | None = None  # a handoff waiting for Ready or the timeout
@@ -117,7 +121,7 @@ def character(venue: Venue, clock: Callable[[], float] = time.monotonic) -> Beha
 
     def setup(timers: TimerScheduler[CharacterMsg]) -> Behavior[CharacterMsg]:
         def tell(s: _State, n: int, cmd: ScreenCmd) -> None:
-            if (ref := s.screens.get(n)) is not None:
+            for ref in s.screens.get(n, ()):
                 ref.tell(cmd)
 
         def current(s: _State, n: int) -> ScreenCmd:
@@ -147,7 +151,7 @@ def character(venue: Venue, clock: Callable[[], float] = time.monotonic) -> Beha
             return replace(s, screen=n, prepared=None, ready=None, moving=None)
 
         def handoff(s: _State, n: int) -> _State:
-            if s.ready == n or n not in s.screens:
+            if s.ready == n or not s.screens.get(n):
                 return complete(s, n)
             s = prepare(s, n)
             timers.start_single_timer("ready", _ReadyTimeout(n), venue.ready_timeout_s)
@@ -220,34 +224,41 @@ def character(venue: Venue, clock: Callable[[], float] = time.monotonic) -> Beha
 
         def publish(s: _State) -> _State:
             status = Status(s.mode, s.count, s.screen)
-            if s.floor is None or status == s.shown:
+            if status == s.shown:
                 return s
-            s.floor.tell(status)
+            for floor in s.floors:
+                floor.tell(status)
             return replace(s, shown=status)
 
         def step(ctx: ActorContext[CharacterMsg], s: _State, msg: CharacterMsg) -> _State:
             match msg:
-                case Frame():
+                case Frame():  # the radar
                     return on_frame(s, msg)
+                case Sensed(floor, frame):
+                    return on_frame(s, frame) if s.floors[-1:] == (floor,) else s
                 case _Settle(seen):
                     return enter_mode(s, _MODE[seen]) if seen == s.settling else s
                 case AttachScreen(n, ref):
                     ctx.watch_with(ref, _ScreenGone(n, ref))
-                    s = replace(s, screens={**s.screens, n: ref})
+                    pages = tuple(p for p in s.screens.get(n, ()) if p != ref) + (ref,)
                     ref.tell(current(s, n))
-                    return s
+                    return replace(s, screens={**s.screens, n: pages})
                 case _ScreenGone(n, ref):
-                    if s.screens.get(n) != ref:  # an older tablet for n: the newer one stays
-                        return s
-                    return replace(s, screens={k: v for k, v in s.screens.items() if k != n})
+                    pages = tuple(p for p in s.screens.get(n, ()) if p != ref)
+                    rest = {k: v for k, v in s.screens.items() if k != n}
+                    return replace(s, screens={**rest, n: pages} if pages else rest)
                 case AttachFloor(ref):
                     ctx.watch_with(ref, _FloorGone(ref))
-                    return replace(s, floor=ref, shown=None)
+                    status = Status(s.mode, s.count, s.screen)
+                    ref.tell(status)
+                    floors = tuple(f for f in s.floors if f != ref) + (ref,)
+                    return replace(s, floors=floors, shown=status)
                 case _FloorGone(ref):
-                    if ref != s.floor:
+                    s = replace(s, floors=tuple(f for f in s.floors if f != ref))
+                    if s.floors:  # the next newest floor's frames drive it now
                         return s
                     # no sensor is the same as nobody there: Idle after idle_after_s
-                    return on_frame(replace(s, floor=None, shown=None), Frame(()))
+                    return on_frame(s, Frame(()))
                 case Ready(n):
                     if s.moving == n:
                         return complete(s, n)

@@ -5,7 +5,7 @@ from ohra.testkit import ActorTestKit, ManualTime, TestProbe
 
 from signage.character import CharacterMsg
 from signage.floor import Pointer, clamp, decode_floor, floor
-from signage.messages import AttachFloor, Frame, Status, Target
+from signage.messages import AttachFloor, Frame, Sensed, Status, Target
 from util import V
 
 
@@ -52,9 +52,9 @@ async def spawned(
 
 async def test_frames_every_100ms_without_input() -> None:
     async with ActorTestKit(manual_time=True) as testkit:
-        character, _, _ = await spawned(testkit)
+        character, _, ref = await spawned(testkit)
         await ManualTime(testkit.system).time_passes(0.3)
-        assert await character.receive_messages(3) == [Frame(())] * 3
+        assert await character.receive_messages(3) == [Sensed(ref, Frame(()))] * 3
         await character.expect_no_message(0)
 
 
@@ -63,7 +63,7 @@ async def test_pointer_then_frame() -> None:
         character, _, ref = await spawned(testkit)
         ref.tell(Pointer((Target(4, 1), Target(-1, 1))))
         await ManualTime(testkit.system).time_passes(0.1)
-        await character.expect_message(Frame((Target(4, 1),)))
+        await character.expect_message(Sensed(ref, Frame((Target(4, 1),))))
 
 
 async def test_status_forwarded() -> None:

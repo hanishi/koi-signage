@@ -152,13 +152,16 @@ for `Ready(s')`, or for `ready_timeout_s`, whichever comes first. Then, with `t 
 which keeps it testable. If `s'` has no display attached, the character moves anyway and the
 `Enter` is dropped.
 
-**Attach and DeathWatch.** On `AttachScreen(n, ref)` the character watches `ref`, replacing an
-older ref for `n` (the last tablet wins), and sends that screen the current state. A `Terminated`
-display is removed, so the character skips sending to that screen. If the Floor terminates, the
+**Attach and DeathWatch.** On `AttachScreen(n, ref)` the character watches `ref`, adds it to the
+pages showing screen `n`, and sends it the current state. Every page for `n` gets that screen's
+commands (mirroring: a tablet and the laptop's view can show the same screen), and a `Ready(n)`
+from any of them counts. A `Terminated` page is removed and the others keep going. Floor pages
+stack. Every floor page gets `Status`, but only the newest one's frames (`Sensed`) drive the
+character, and when it leaves, the next newest takes over. When the last floor page goes, the
 character treats it as an empty frame, so it falls to Idle after `idle_after_s` and the screens
-keep playing.
+keep playing. The radar sends plain `Frame`s.
 
-After any change, the character sends `Status(mode, count, screen)` to the Floor.
+After any change, the character sends `Status(mode, count, screen)` to every floor page.
 
 ## Browser side
 
