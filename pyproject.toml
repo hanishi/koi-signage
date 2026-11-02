@@ -1,0 +1,40 @@
+[project]
+name = "signage"
+version = "0.1.0"
+description = "Venue runtime for people-reactive signage on ohra: a character that idles, follows one person, or moves toward a crowd across three screens."
+license = "Apache-2.0"
+authors = [{ name = "Haruhiko Nishi" }]
+requires-python = ">=3.12"
+dependencies = ["ohra[web]>=0.5"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.24", "pyright>=1.1.380", "ruff>=0.17", "httpx>=0.27"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+signage = ["py.typed", "static/*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.pyright]
+include = ["src", "tests"]
+typeCheckingMode = "strict"
+pythonVersion = "3.12"
+reportUnnecessaryTypeIgnoreComment = "error"
+
+[tool.ruff]
+line-length = 99
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "W", "N"]

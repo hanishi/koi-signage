@@ -91,19 +91,24 @@ Dev: pytest, pytest-asyncio, pyright strict, ruff, httpx. Plain HTML and JS.
 ```python
 V = load_venue(Path(__file__).parent.parent / "venue.toml")
 
+
 def test_loads_repo_venue():
     assert V.zone_cuts_m == (1, 2, 3, 4, 5, 6, 7, 8) and V.ready_timeout_s == 1.0
+
 
 def test_zone_and_screen_at_cuts():
     assert [zone_of(V, x) for x in (0.0, 0.99, 1.0, 8.0, 9.0)] == [0, 0, 1, 8, 8]
     assert [screen_of(V, x) for x in (2.99, 3.0, 5.99, 6.0)] == [0, 1, 1, 2]
     assert boundaries(V) == (3, 6)
 
+
 def test_screen_counts():
     assert screen_counts(V, [Target(0.5, 1), Target(4, 1), Target(4.5, 2)]) == (1, 2, 0)
 
+
 def test_rejects_bad_cuts(tmp_path):  # write a toml with cuts [1, 3, 2, ...]; also only 7 cuts
-    with pytest.raises(ValueError): load_venue(bad)
+    with pytest.raises(ValueError):
+        load_venue(bad)
 ```
 
 - [ ] **Step 3: Run** `uv run pytest tests/test_venue.py`. Expected: FAIL (import error).
