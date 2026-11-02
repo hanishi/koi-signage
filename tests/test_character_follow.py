@@ -1,6 +1,6 @@
 from koi_signage.character import follow_step
 from koi_signage.messages import Cancel, Enter, Exit, Prepare, Ready, Status
-from util import V, people, rig
+from util import V, V4, people, rig
 
 
 def test_follow_step() -> None:  # boundaries at 3 and 6, dead zone 0.3
@@ -94,3 +94,20 @@ async def test_mode_change_cancels_prepare() -> None:
         r.ref.tell(people(3.2, 8.0))  # two people: no follow decisions, Crowd after 1 s
         await r.time.time_passes(1.0)
         await r.screens[0].expect_message(Cancel())
+
+
+async def test_four_screens_hand_off_one_at_a_time() -> None:
+    async with rig(attach=(0, 1, 2, 3), venue=V4) as r:
+        await r.follow()  # it starts on screen 1 of 0..3
+        r.ref.tell(people(10.5))  # over on screen 3
+        await r.screens[2].expect_message(Prepare())
+        r.ref.tell(Ready(2))
+        assert (await r.screens[1].expect_message_type(Exit)).side == "right"
+        assert (await r.screens[2].expect_message_type(Enter)).side == "left"
+        await r.floor.expect_message(Status("follow", 1, 2))
+        r.ref.tell(people(10.5))  # the next frame takes the next step
+        await r.screens[3].expect_message(Prepare())
+        r.ref.tell(Ready(3))
+        await r.screens[2].expect_message_type(Exit)
+        await r.screens[3].expect_message_type(Enter)
+        await r.floor.expect_message(Status("follow", 1, 3))

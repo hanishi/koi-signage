@@ -12,7 +12,7 @@ will later run on the Pi.
 
 Success:
 
-- On one laptop, moving the pointer over the floor makes the character follow it across three
+- On one laptop, moving the pointer over the floor makes the character follow it across the
   screens. Clicking drops people who stand still, which drives crowd mode.
 - The 1 s and 3 s thresholds, the boundary dead zone and the handoff are tested on a manual
   clock, with no sleeps.
@@ -175,7 +175,7 @@ After any change, the character sends `Status(mode, count, screen)` to every flo
   Display replies `pong{c, s}` with `s = time.monotonic()`. The page uses the sample with the
   smallest RTT among the last 6 (one minute), so tablet clock drift is followed: `offset = s − (c + rtt/2)`, using `performance.now()/1000`. It runs `enter(t)` and
   `exit(t)` at local time `t − offset`.
-- **index.html** opens four sockets (the floor plus three screens) and lays them out as in the
+- **index.html** opens one socket for the floor plus one per screen and lays them out as in the
   mockup. **screen.html** opens one. Both use the same JS for a screen.
 - Commands to a screen: `idle`, `prepare`, `cancel`, `enter{t}`, `exit{t}`. From a screen:
   `ready`, `ping{c}`.

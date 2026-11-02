@@ -14,7 +14,7 @@ from koi_signage.app import GetCharacter, create_app, from_env, guardian
 from koi_signage.character import CharacterMsg
 from koi_signage.messages import Frame
 from koi_signage.venue import DEFAULT_VENUE
-from util import V
+from util import V, V4
 
 
 def until(ws: WebSocketTestSession, kind: str, limit: int = 50) -> dict[str, Any]:
@@ -57,6 +57,7 @@ def test_venue_for_the_page() -> None:
         assert client.get("/venue").json() == {
             "width_m": 9.0,
             "depth_m": 4.0,
+            "screens": 3,
             "zone_cuts_m": [1, 2, 3, 4, 5, 6, 7, 8],
             "radar": {"x_m": 4.5, "range_m": 6.0, "fov_deg": 120.0},
         }
@@ -134,3 +135,13 @@ def test_from_env_prefers_venue_toml_here_then_dollar_venue(
     other.write_text(here.replace("depth_m = 5.0", "depth_m = 6.0"))
     monkeypatch.setenv("VENUE", str(other))
     assert depth_served() == 6.0
+
+
+def test_screen_count_from_the_venue() -> None:
+    with TestClient(create_app(V4)) as client:
+        assert client.get("/venue").json()["screens"] == 4
+        with client.websocket_connect("/ws/screen/3") as ws:
+            ws.send_json({"type": "ping", "c": 0.0})
+            assert ws.receive_json()["type"] == "pong"
+        with pytest.raises(WebSocketDisconnect), client.websocket_connect("/ws/screen/4"):
+            pass

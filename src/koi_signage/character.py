@@ -25,7 +25,7 @@ from koi_signage.messages import (
     Sensed,
     Status,
 )
-from koi_signage.venue import SCREENS, Venue, boundaries, screen_counts
+from koi_signage.venue import Venue, boundaries, screen_counts
 
 
 @dataclass(frozen=True)
@@ -104,7 +104,7 @@ def follow_step(
     still gets a handoff to the neighbour, so the character crosses one screen at a time."""
     cuts = boundaries(v)
     for n in (screen - 1, screen + 1):
-        if not 0 <= n < SCREENS:
+        if not 0 <= n < v.screens:
             continue
         b = cuts[min(screen, n)]
         d = x - b if n > screen else b - x  # > 0: on n's side
@@ -144,7 +144,7 @@ def character(venue: Venue, clock: Callable[[], float] = time.monotonic) -> Beha
 
         def complete(s: _State, n: int) -> _State:
             t = clock() + venue.handoff_lead_s
-            rightward = n > s.screen  # screens run 0, 1, 2 from left to right
+            rightward = n > s.screen  # screens are numbered from the left
             tell(s, s.screen, Exit(t, "right" if rightward else "left"))
             tell(s, n, Enter(t, "left" if rightward else "right"))
             timers.cancel("ready")
@@ -279,6 +279,6 @@ def character(venue: Venue, clock: Callable[[], float] = time.monotonic) -> Beha
 
             return Behaviors.receive(on_message)
 
-        return run(_State())
+        return run(_State(screen=(venue.screens - 1) // 2))  # start in the middle
 
     return Behaviors.with_timers(setup)

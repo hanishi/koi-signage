@@ -1,7 +1,7 @@
 # koi-signage
 
-People-reactive signage on [ohra](https://github.com/hanishi/ohra) actors. A koi lives in three
-screens side by side and reacts to the people in front of them:
+People-reactive signage on [ohra](https://github.com/hanishi/ohra) actors. A koi lives in a row of
+screens side by side (three by default) and reacts to the people in front of them:
 - With nobody there, it wanders deep below, faint.
 - With one person, it rises and follows them from screen to screen, swimming across the gap.
 - With several, it swims toward the busiest screen.
@@ -25,13 +25,13 @@ uv sync --all-extras
 uv run uvicorn --factory koi_signage.app:from_env --host 0.0.0.0 --port 8124
 ```
 
-- **http://localhost:8124/** shows the three screens above the floor.
+- **http://localhost:8124/** shows the screens above the floor.
   - Move the pointer over the floor to walk in.
   - Click to leave someone standing.
   - Move off the floor to leave.
 - **http://localhost:8124/?screens=off** is the floor alone. Its **Screen 0/1/2** buttons open
-  each screen as its own window, side by side, so three windows stand in for the three tablets.
-  This is good for the character's logic and for demos. All three windows share one clock, so
+  each screen as its own window, side by side, so the windows stand in for the tablets.
+  This is good for the character's logic and for demos. The windows share one clock, so
   sync and latency look perfect here.
 - **http://&lt;pi&gt;:8124/screen?n=0** (and `1`, `2`) is one screen, full-window, for a tablet's
   kiosk browser. Any phone, tablet or laptop on the same Wi-Fi works. Separate devices are what
@@ -41,8 +41,8 @@ uv run uvicorn --factory koi_signage.app:from_env --host 0.0.0.0 --port 8124
 To find the address to type on a phone, run `ipconfig getifaddr en0` (macOS) or `hostname -I`
 (Linux), and open `http://<that address>:8124/screen?n=0`.
 
-Line the screens up left to right as 0, 1, 2. Any number of devices can show the same screen
-number: they mirror each other.
+Line the screens up left to right as 0, 1, 2 (and so on). Any number of devices can show the same
+screen number: they mirror each other.
 
 ## The koi
 
@@ -74,8 +74,15 @@ The LD2450 actor will replace Floor and send the same `Frame`. The
 
 ## Calibration
 
-`venue.toml` holds the floor size, the zone cuts (3 zones per screen) and every threshold. They
-are set per site, because a real radar reads off and real people stand in odd places.
+`venue.toml` holds the number of screens, the floor size, the zone cuts (3 zones per screen) and
+every threshold. They are set per site, because a real radar reads off and real people stand in
+odd places.
+
+`screens` (default 3) is how many screens stand in the row. Each needs 3 zones, so `zone_cuts_m`
+has 3 × screens − 1 cuts, and `width_m` grows with the row: 4 screens at 3 m each is
+`screens = 4`, `width_m = 12.0`, `zone_cuts_m = [1, 2, …, 11]`. The pages, the screen sockets and
+the character all follow. One radar covers less of a longer row: move `[radar] x_m` to the
+middle and the floor page shows where it can't see.
 
 The server reads `$VENUE` if it is set, otherwise `venue.toml` in the directory it starts in,
 otherwise the defaults that ship with the package

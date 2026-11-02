@@ -19,7 +19,7 @@ from ohra.ext.fastapi import Actors
 from koi_signage.character import CharacterMsg, character
 from koi_signage.display import decode_screen, display
 from koi_signage.floor import decode_floor, floor
-from koi_signage.venue import DEFAULT_VENUE, SCREENS, Venue, load_venue
+from koi_signage.venue import DEFAULT_VENUE, Venue, load_venue
 
 STATIC = Path(__file__).parent / "static"
 
@@ -101,6 +101,7 @@ def create_app(venue: Venue) -> FastAPI:
     async def floor_plan() -> dict[str, Any]:
         """What the page needs to draw the floor."""
         return {
+            "screens": venue.screens,
             "width_m": venue.width_m,
             "depth_m": venue.depth_m,
             "zone_cuts_m": list(venue.zone_cuts_m),
@@ -121,7 +122,7 @@ def create_app(venue: Venue) -> FastAPI:
     @app.websocket("/ws/screen/{n}")
     async def screen_socket(
         ws: WebSocket,
-        n: Annotated[int, Param(ge=0, le=SCREENS - 1)],
+        n: Annotated[int, Param(ge=0, le=venue.screens - 1)],
         system: ActorSystem[GuardianMsg] = actors.depends(),
     ) -> None:
         ch = await the_character(system)

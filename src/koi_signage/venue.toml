@@ -2,9 +2,10 @@
 # so these are set per venue, not in code.
 
 [floor]
+screens = 3             # side by side, numbered 0, 1, 2 from the left
 width_m = 9.0
 depth_m = 4.0
-zone_cuts_m = [1, 2, 3, 4, 5, 6, 7, 8]   # 9 zones along the corridor; 3 per screen, left to right
+zone_cuts_m = [1, 2, 3, 4, 5, 6, 7, 8]   # 3 zones per screen, so 3 × screens − 1 cuts, left to right
 max_distance_m = 3.0   # further from the screens than this is ignored (the floor page has a slider)
 
 [radar]                 # one HLK-LD2450 on the screen line, facing the floor
