@@ -1,15 +1,26 @@
 // One screen: what a tablet runs. Shared by the one-page view (index.html) and screen.html.
 //
 // The venue's clock is the server's monotonic clock. Pings measure this page's offset from it,
-// keeping the sample with the smallest round trip, and enter/exit run at local time t - offset,
+// from the fastest ping of the last minute, and enter/exit run at local time t - offset,
 // so two screens change on the same frame.
 
 const now = () => performance.now() / 1000;
 
+// Pings go every 10 s, so 6 samples is the last minute. Keeping the smallest round trip of all
+// time would freeze the offset, and a tablet's crystal drifts 10-50 ppm against the Pi.
+export const SAMPLE_WINDOW = 6;
+
+// The venue clock minus the page clock, from the fastest of the last SAMPLE_WINDOW pings. A
+// sample is {c: sent, r: received} on the page clock and {s} on the venue clock.
+export function offsetFrom(samples) {
+  const best = samples.slice(-SAMPLE_WINDOW).reduce((a, b) => (b.r - b.c < a.r - a.c ? b : a));
+  return best.s - (best.c + (best.r - best.c) / 2);
+}
+
 export function connectScreen(n, el) {
   let ws;
   let offset = 0;
-  let best = Infinity;
+  let samples = [];
   let backoff = 0.5;
   let pending = [];
 
@@ -30,17 +41,16 @@ export function connectScreen(n, el) {
     ws = new WebSocket(`${proto}://${location.host}/ws/screen/${n}`);
     ws.onopen = () => {
       backoff = 0.5;
-      best = Infinity;
+      samples = [];
       for (let i = 0; i < 5; i++) setTimeout(ping, i * 200);
     };
     ws.onmessage = (e) => {
       const m = JSON.parse(e.data);
       switch (m.type) {
-        case "pong": {
-          const rtt = now() - m.c;
-          if (rtt < best) { best = rtt; offset = m.s - (m.c + rtt / 2); }
+        case "pong":
+          samples = [...samples, { c: m.c, r: now(), s: m.s }].slice(-SAMPLE_WINDOW);
+          offset = offsetFrom(samples);
           break;
-        }
         case "idle":
           pending.forEach(clearTimeout);
           pending = [];

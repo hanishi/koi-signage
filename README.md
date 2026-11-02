@@ -66,4 +66,5 @@ points at another file.
 
 ```
 uv run ruff format && uv run ruff check && uv run pyright && uv run pytest
+node --test tests/js   # the tablets' clock-offset estimate
 ```

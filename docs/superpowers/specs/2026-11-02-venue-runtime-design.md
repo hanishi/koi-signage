@@ -166,8 +166,8 @@ After any change, the character sends `Status(mode, count, screen)` to every flo
 ## Browser side
 
 - **Clock offset.** Each screen page sends `ping{c}` five times at startup and then every 10 s.
-  Display replies `pong{c, s}` with `s = time.monotonic()`. The page keeps the sample with the
-  smallest RTT: `offset = s − (c + rtt/2)`, using `performance.now()/1000`. It runs `enter(t)` and
+  Display replies `pong{c, s}` with `s = time.monotonic()`. The page uses the sample with the
+  smallest RTT among the last 6 (one minute), so tablet clock drift is followed: `offset = s − (c + rtt/2)`, using `performance.now()/1000`. It runs `enter(t)` and
   `exit(t)` at local time `t − offset`.
 - **index.html** opens four sockets (the floor plus three screens) and lays them out as in the
   mockup. **screen.html** opens one. Both use the same JS for a screen.
