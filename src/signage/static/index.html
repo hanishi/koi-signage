@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Venue</title>
+<style>
+  :root { color-scheme: dark; --bg: #0a0d12; --line: #2a3140; --edge: #4f8cff; --text: #c9d2de; --muted: #7a8596; }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; display: grid; gap: 12px; }
+  .screens { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .screens .screen { aspect-ratio: 16 / 10; border-radius: 6px; }
+  .label { color: var(--muted); font-size: 12px; text-align: center; }
+  #floor { position: relative; background: #0f131a; border: 1px solid var(--line); border-radius: 6px;
+    cursor: crosshair; touch-action: none; user-select: none; }
+  .cut { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px dashed var(--line); }
+  .cut.edge { border-left: 2px solid var(--edge); opacity: .6; }
+  .dot { position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%;
+    background: #e8edf4; pointer-events: none; }
+  .dot.pointer { background: none; border: 2px solid #ffd166; }
+  #status { display: flex; gap: 16px; color: var(--muted); }
+  #status b { color: var(--text); font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <div class="screens" id="screens"></div>
+  <div class="screens"><div class="label">screen 0</div><div class="label">screen 1</div><div class="label">screen 2</div></div>
+  <div id="floor"></div>
+  <div id="status">
+    <span>mode <b id="mode">–</b></span><span>people <b id="count">–</b></span>
+    <span>screen <b id="screen">–</b></span><span id="link">floor offline</span>
+  </div>
+  <p class="label">Move the pointer over the floor to walk in. Click to leave someone standing (two at most, three with the pointer, as the radar tracks three). Move off the floor to leave.</p>
+</main>
+<script type="module">
+  import { connectScreen, screenElement, SCREEN_CSS } from "/static/screen.js";
+
+  document.head.append(Object.assign(document.createElement("style"), { textContent: SCREEN_CSS }));
+  const row = document.getElementById("screens");
+  for (let n = 0; n < 3; n++) {
+    const el = screenElement();
+    row.append(el);
+    connectScreen(n, el);
+  }
+
+  const venue = await (await fetch("/venue")).json();
+  const floorEl = document.getElementById("floor");
+  floorEl.style.aspectRatio = `${venue.width_m} / ${venue.depth_m}`;
+  venue.zone_cuts_m.forEach((x, i) => {
+    const cut = document.createElement("div");
+    cut.className = (i === 2 || i === 5) ? "cut edge" : "cut";  // screen boundaries
+    cut.style.left = `${(x / venue.width_m) * 100}%`;
+    floorEl.append(cut);
+  });
+
+  let pointer = null;
+  const standing = [];
+  const MAX_STANDING = 2;
+
+  const metres = (e) => {
+    const r = floorEl.getBoundingClientRect();
+    return { x: ((e.clientX - r.left) / r.width) * venue.width_m,
+             y: ((e.clientY - r.top) / r.height) * venue.depth_m };
+  };
+  const targets = () => [...(pointer ? [pointer] : []), ...standing];
+
+  function draw() {
+    floorEl.querySelectorAll(".dot").forEach((d) => d.remove());
+    for (const [p, cls] of [...standing.map((p) => [p, "dot"]), ...(pointer ? [[pointer, "dot pointer"]] : [])]) {
+      const d = document.createElement("div");
+      d.className = cls;
+      d.style.left = `${(p.x / venue.width_m) * 100}%`;
+      d.style.top = `${(p.y / venue.depth_m) * 100}%`;
+      floorEl.append(d);
+    }
+  }
+
+  let ws;
+  let backoff = 0.5;
+  let queued = false;
+  function send() {
+    draw();
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => {  // at most one frame per animation frame
+      queued = false;
+      if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ targets: targets() }));
+    });
+  }
+
+  floorEl.addEventListener("pointermove", (e) => { pointer = metres(e); send(); });
+  floorEl.addEventListener("pointerleave", () => { pointer = null; send(); });
+  floorEl.addEventListener("click", (e) => {
+    const p = metres(e);
+    const near = standing.findIndex((s) => Math.hypot(s.x - p.x, s.y - p.y) < 0.3);
+    if (near >= 0) standing.splice(near, 1);
+    else if (standing.length < MAX_STANDING) standing.push(p);
+    send();
+  });
+
+  function open() {
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    ws = new WebSocket(`${proto}://${location.host}/ws/floor`);
+    ws.onopen = () => { backoff = 0.5; document.getElementById("link").textContent = ""; send(); };
+    ws.onmessage = (e) => {
+      const m = JSON.parse(e.data);
+      if (m.type !== "status") return;
+      document.getElementById("mode").textContent = m.mode;
+      document.getElementById("count").textContent = m.count;
+      document.getElementById("screen").textContent = m.screen;
+    };
+    ws.onclose = () => {
+      document.getElementById("link").textContent = "floor offline, reconnecting";
+      setTimeout(open, backoff * 1000);
+      backoff = Math.min(backoff * 2, 8);
+    };
+  }
+  open();
+</script>
+</body>
+</html>

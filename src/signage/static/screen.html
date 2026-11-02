@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Screen</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; }
+  .screen { position: fixed; inset: 0; }
+</style>
+</head>
+<body>
+<script type="module">
+  import { connectScreen, screenElement, SCREEN_CSS } from "/static/screen.js";
+
+  const n = Number(new URLSearchParams(location.search).get("n") ?? 0);
+  document.title = `Screen ${n}`;
+  document.head.append(Object.assign(document.createElement("style"), { textContent: SCREEN_CSS }));
+  const el = screenElement();
+  document.body.append(el);
+  connectScreen(n, el);
+</script>
+</body>
+</html>
