@@ -1,4 +1,4 @@
-# Signage Simulator Implementation Plan
+# Venue Runtime (Pointer Sensor) Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -14,7 +14,7 @@ so ManualTime tests it.
 **Tech Stack:** Python 3.12+, `ohra[web]>=0.5` (FastAPI, uvicorn, `Actors.websocket`), `tomllib`.
 Dev: pytest, pytest-asyncio, pyright strict, ruff, httpx. Plain HTML and JS.
 
-**Spec:** `docs/superpowers/specs/2026-11-02-signage-simulator-design.md`
+**Spec:** `docs/superpowers/specs/2026-11-02-venue-runtime-design.md`
 
 ## Global Constraints
 
@@ -436,12 +436,12 @@ Pages: no framework, keep them small.
 - [ ] **Step 3: Implement** `app.py` and the three static files.
 - [ ] **Step 4: Run all checks.** Expected: PASS.
 - [ ] **Step 5: Manual check.**
-  - Run `uv run uvicorn --factory signage.app:from_env --port 8124` and open
+  - Run `uv run uvicorn --factory signage.app:from_env --host 0.0.0.0 --port 8124` and open
     http://localhost:8124/.
   - The pointer held over the floor for 1 s brings the character, which follows across screens.
   - Two clicks give `crowd` in the status line.
   - Moving off the floor gives the attract loop on all three screens after 3 s.
   - `http://localhost:8124/screen?n=2` in a second window mirrors screen 2.
-- [ ] **Step 6: Commit** with the message `app: guardian, floor and screen WebSockets, the one-page simulator and a per-tablet screen page`.
+- [ ] **Step 6: Commit** with the message `app: guardian, floor and screen WebSockets, the one-page venue view and a per-tablet screen page`.
 - [ ] **Step 7: Add a README.** Write a short one: what this is (link the article), the run
   command, `venue.toml` as calibration, and v1's out-of-scope table from the spec. Commit it.

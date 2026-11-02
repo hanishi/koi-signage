@@ -1,4 +1,4 @@
-# Signage simulator: design
+# Venue runtime (pointer sensor): design
 
 Date: 2026-11-02. Source concept:
 [人に反応するサイネージを、Raspberry Pi とミリ波レーダーで作る構想](https://note.com/programmer_llc/n/nc70f6eca15ee).
@@ -25,7 +25,7 @@ Success:
 | Left out | Add when |
 |---|---|
 | Uplink, Outbox, CreativeCache (Promovolve) | the HTTPS contract with Promovolve is agreed |
-| Operator agent (ohra-agents) | the simulator runs and the agent is still wanted |
+| Operator agent (ohra-agents) | it runs and the agent is still wanted |
 | LD2450 UART sensor | the radar arrives |
 | Follow cap (screens or seconds, the creepiness mitigation) | after a first walk-through |
 | Walking-speed lead on the handoff time | latency is measured on tablets |
