@@ -24,7 +24,7 @@ from signage.messages import (
     ScreenCmd,
     Status,
 )
-from signage.venue import SCREENS, Venue, boundaries
+from signage.venue import SCREENS, Venue, boundaries, screen_counts
 
 
 @dataclass(frozen=True)
@@ -53,6 +53,11 @@ class _LingerDone:
     pass
 
 
+@dataclass(frozen=True)
+class _LeadDone:
+    screen: int
+
+
 type CharacterMsg = (
     Frame
     | AttachScreen
@@ -63,6 +68,7 @@ type CharacterMsg = (
     | _FloorGone
     | _ReadyTimeout
     | _LingerDone
+    | _LeadDone
 )
 
 _MODE: Mapping[int, Mode] = {0: "idle", 1: "follow", 2: "crowd"}
@@ -82,6 +88,8 @@ class _State:
     prepared: int | None = None  # the screen told Prepare
     ready: int | None = None  # the prepared screen, once it answered Ready
     moving: int | None = None  # a handoff waiting for Ready or the timeout
+    lead: int | None = None  # the screen leading the crowd, other than the character's
+    lead_due: bool = False  # it has led for crowd_lead_s
 
 
 def follow_step(
@@ -154,9 +162,37 @@ def character(venue: Venue, clock: Callable[[], float] = time.monotonic) -> Beha
                 case "handoff", n:
                     return handoff(s, n)
 
+        def crowd(s: _State, frame: Frame) -> _State:
+            counts = screen_counts(venue, frame.targets)
+            most = max(counts)
+            leader = counts.index(most) if counts.count(most) == 1 else None  # a tie: no leader
+            if leader is None or leader == s.screen:
+                timers.cancel("lead")
+                return replace(s, lead=None, lead_due=False)
+            if s.lead != leader:
+                timers.start_single_timer("lead", _LeadDone(leader), venue.crowd_lead_s)
+                return replace(s, lead=leader, lead_due=False)
+            return s
+
+        def try_move(s: _State) -> _State:
+            """One screen toward a leader that has led long enough, once the character has
+            lingered where it is."""
+            if (
+                s.mode != "crowd"
+                or s.lead is None
+                or not s.lead_due
+                or s.moving is not None
+                or timers.is_timer_active("linger")
+            ):
+                return s
+            step = s.screen + (1 if s.lead > s.screen else -1)
+            # the next frame re-arms the lead if the leader is still elsewhere
+            return handoff(replace(s, lead=None, lead_due=False), step)
+
         def enter_mode(s: _State, mode: Mode) -> _State:
             was = s.mode
-            s = replace(unprepare(s), mode=mode, settling=None)
+            timers.cancel("lead")
+            s = replace(unprepare(s), mode=mode, settling=None, lead=None, lead_due=False)
             if mode == "idle" or was == "idle":
                 for n in s.screens:
                     tell(s, n, current(s, n))
@@ -178,6 +214,8 @@ def character(venue: Venue, clock: Callable[[], float] = time.monotonic) -> Beha
                 return s
             if s.mode == "follow" and s.count == 1:
                 return follow(s, frame.targets[0].x)
+            if s.mode == "crowd":
+                return crowd(s, frame)
             return s
 
         def publish(s: _State) -> _State:
@@ -217,7 +255,9 @@ def character(venue: Venue, clock: Callable[[], float] = time.monotonic) -> Beha
                 case _ReadyTimeout(n):
                     return complete(s, n) if s.moving == n else s
                 case _LingerDone():
-                    return s
+                    return try_move(s)
+                case _LeadDone(n):
+                    return try_move(replace(s, lead_due=True)) if n == s.lead else s
 
         def run(s: _State) -> Behavior[CharacterMsg]:
             def on_message(
