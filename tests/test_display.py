@@ -34,7 +34,7 @@ async def test_commands_held_until_first_ping() -> None:
         ref.tell(Ping(1.0))
         assert await out.receive_messages(2) == [
             {"type": "pong", "c": 1.0, "s": 42.0},
-            {"type": "enter", "t": 2.5},
+            {"type": "enter", "t": 2.5, "side": None},
         ]
 
 
@@ -43,14 +43,14 @@ async def test_commands_to_json() -> None:
         _, out, ref = await spawned(testkit)
         ref.tell(Ping(0.0))
         await out.receive_message()
-        for cmd in (Idle(), Prepare(), Cancel(), Enter(2.5), Exit(3.0)):
+        for cmd in (Idle(), Prepare(), Cancel(), Enter(2.5, "left"), Exit(3.0)):
             ref.tell(cmd)
         assert await out.receive_messages(5) == [
             {"type": "idle"},
             {"type": "prepare"},
             {"type": "cancel"},
-            {"type": "enter", "t": 2.5},
-            {"type": "exit", "t": 3.0},
+            {"type": "enter", "t": 2.5, "side": "left"},
+            {"type": "exit", "t": 3.0, "side": None},
         ]
 
 

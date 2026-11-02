@@ -70,7 +70,7 @@ anyone beyond it. Copy a value you like into `venue.toml`: a restart starts from
 | Follow cap (the creepiness mitigation) | after a first walk-through |
 | Walking-speed lead on the handoff time | latency is measured on tablets |
 | Loop-lag metric | it runs on the Pi |
-| Real creatives: the character is a placeholder glyph | Promovolve supplies assets |
+| Real creatives: the character is a drawn koi (`static/koi.js`) | Promovolve supplies assets |
 
 ## Checks
 

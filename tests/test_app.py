@@ -65,6 +65,8 @@ def test_pages_served() -> None:
         assert "connectScreen" in client.get("/screen").text
         js = client.get("/static/screen.js")
         assert js.headers["content-type"].startswith("text/javascript")
+        assert "export function pond" in client.get("/static/koi.js").text
+        assert client.get("/static/app.py").status_code == 404
 
 
 def test_bad_screen_index_rejected() -> None:

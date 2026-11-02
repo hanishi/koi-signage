@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, HTTPException, WebSocket
 from fastapi import Path as Param
 from fastapi.responses import HTMLResponse, Response
 from ohra import ActorContext, ActorRef, ActorSystem, Behavior, Behaviors
@@ -78,7 +78,7 @@ def create_app(venue: Venue) -> FastAPI:
     )
     index = (STATIC / "index.html").read_text()
     screen_page = (STATIC / "screen.html").read_text()
-    screen_js = (STATIC / "screen.js").read_text()
+    scripts = {name: (STATIC / name).read_text() for name in ("screen.js", "koi.js")}
 
     async def the_character(system: ActorSystem[GuardianMsg]) -> ActorRef[CharacterMsg]:
         return await system.ask(GetCharacter, timeout=2)
@@ -91,9 +91,11 @@ def create_app(venue: Venue) -> FastAPI:
     async def screen() -> HTMLResponse:
         return HTMLResponse(screen_page)
 
-    @app.get("/static/screen.js")
-    async def script() -> Response:
-        return Response(screen_js, media_type="text/javascript")
+    @app.get("/static/{name}")
+    async def script(name: str) -> Response:
+        if name not in scripts:
+            raise HTTPException(404)
+        return Response(scripts[name], media_type="text/javascript")
 
     @app.get("/venue")
     async def floor_plan() -> dict[str, Any]:

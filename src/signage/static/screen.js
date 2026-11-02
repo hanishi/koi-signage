@@ -4,6 +4,8 @@
 // from the fastest ping of the last minute, and enter/exit run at local time t - offset,
 // so two screens change on the same frame.
 
+import { pond } from "./koi.js";
+
 const now = () => performance.now() / 1000;
 
 // Pings go every 10 s, so 6 samples is the last minute. Keeping the smallest round trip of all
@@ -24,8 +26,8 @@ export function connectScreen(n, el) {
   let backoff = 0.5;
   let pending = [];
 
-  const show = (state) => { el.dataset.state = state; };
-  const prepared = (on) => { el.classList.toggle("prepared", on); };
+  const koi = pond(el.querySelector("canvas"));
+  const show = (state, side = null) => { el.dataset.state = state; koi.show(state, side); };
   const send = (frame) => { if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(frame)); };
   const ping = () => send({ type: "ping", c: now() });
   // every t is now or now + handoff_lead_s on the venue clock: anything further means the
@@ -54,23 +56,20 @@ export function connectScreen(n, el) {
         case "idle":
           pending.forEach(clearTimeout);
           pending = [];
-          prepared(false);
           show("idle");
           break;
         case "prepare":
-          // ponytail: the placeholder glyph needs no loading; real creatives preload here
-          prepared(true);
+          // ponytail: the koi is drawn, so nothing to load; real creatives preload here
+          koi.ripple(); // the water stirs: something may come
           send({ type: "ready" });
           break;
         case "cancel":
-          prepared(false);
           break;
         case "enter":
-          prepared(false);
-          at(m.t, () => show("character"));
+          at(m.t, () => show("character", m.side));
           break;
         case "exit":
-          at(m.t, () => show("blank"));
+          at(m.t, () => show("blank", m.side));
           break;
       }
     };
@@ -85,21 +84,14 @@ export function connectScreen(n, el) {
 }
 
 export const SCREEN_CSS = `
-.screen { position: relative; display: grid; place-items: center; overflow: hidden;
-  background: #11151c; color: #e8edf4; border: 2px solid transparent; }
-.screen.prepared { border-color: #4f8cff55; border-style: dashed; }
-.screen .glyph { font: 600 clamp(28px, 7vw, 120px)/1 system-ui, sans-serif; display: none; }
-.screen[data-state="character"] .glyph.character { display: block; animation: bob 1.2s ease-in-out infinite; }
-.screen[data-state="idle"] .glyph.attract { display: block; animation: pulse 2.4s ease-in-out infinite; }
-@keyframes bob { 50% { transform: translateY(-8%); } }
-@keyframes pulse { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .screen .glyph { animation: none !important; } }
+.screen { position: relative; overflow: hidden; background: #061516; }
+.screen canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 `;
 
 export function screenElement() {
   const el = document.createElement("div");
   el.className = "screen";
   el.dataset.state = "blank";
-  el.innerHTML = '<div class="glyph character">(^_^)</div><div class="glyph attract">◎</div>';
+  el.append(document.createElement("canvas"));
   return el;
 }

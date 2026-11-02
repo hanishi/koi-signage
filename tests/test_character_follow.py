@@ -31,8 +31,8 @@ async def test_crossing_hands_off_with_same_t() -> None:
         r.ref.tell(Ready(0))
         r.ref.tell(people(2.5))
         t = r.now() + V.handoff_lead_s
-        await r.screens[1].expect_message(Exit(t))
-        await r.screens[0].expect_message(Enter(t))
+        await r.screens[1].expect_message(Exit(t, "left"))  # out through screen 1's left edge
+        await r.screens[0].expect_message(Enter(t, "right"))  # in from screen 0's right edge
         await r.floor.expect_message(Status("follow", 1, 0))
 
 
@@ -45,8 +45,8 @@ async def test_handoff_without_ready_times_out() -> None:
         await r.screens[1].expect_no_message(0)
         await r.time.time_passes(0.1)
         t = r.now() + V.handoff_lead_s
-        await r.screens[1].expect_message(Exit(t))
-        await r.screens[0].expect_message(Enter(t))
+        await r.screens[1].expect_message(Exit(t, "left"))  # out through screen 1's left edge
+        await r.screens[0].expect_message(Enter(t, "right"))  # in from screen 0's right edge
 
 
 async def test_jitter_inside_band_sends_one_prepare() -> None:
@@ -71,8 +71,8 @@ async def test_far_target_steps_one_screen() -> None:
         r.ref.tell(people(8.0))  # far right: one screen at a time
         await r.screens[1].expect_message(Prepare())
         r.ref.tell(Ready(1))
-        await r.screens[0].expect_message_type(Exit)
-        await r.screens[1].expect_message_type(Enter)
+        assert (await r.screens[0].expect_message_type(Exit)).side == "right"
+        assert (await r.screens[1].expect_message_type(Enter)).side == "left"
         await r.screens[2].expect_no_message(0)
         r.ref.tell(people(8.0))  # the next frame takes the next step
         await r.screens[2].expect_message(Prepare())
@@ -82,7 +82,7 @@ async def test_handoff_to_detached_screen_moves() -> None:
     async with rig(attach=(1, 2)) as r:
         await r.follow()
         r.ref.tell(people(2.5))
-        await r.screens[1].expect_message(Exit(r.now() + V.handoff_lead_s))
+        await r.screens[1].expect_message(Exit(r.now() + V.handoff_lead_s, "left"))
         await r.floor.expect_message(Status("follow", 1, 0))
 
 

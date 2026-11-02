@@ -144,8 +144,9 @@ def character(venue: Venue, clock: Callable[[], float] = time.monotonic) -> Beha
 
         def complete(s: _State, n: int) -> _State:
             t = clock() + venue.handoff_lead_s
-            tell(s, s.screen, Exit(t))
-            tell(s, n, Enter(t))
+            rightward = n > s.screen  # screens run 0, 1, 2 from left to right
+            tell(s, s.screen, Exit(t, "right" if rightward else "left"))
+            tell(s, n, Enter(t, "left" if rightward else "right"))
             timers.cancel("ready")
             timers.start_single_timer("linger", _LingerDone(), venue.linger_s)
             return replace(s, screen=n, prepared=None, ready=None, moving=None)

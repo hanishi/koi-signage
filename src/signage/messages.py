@@ -21,11 +21,13 @@ __all__ = [
     "Ready",
     "ScreenCmd",
     "Sensed",
+    "Side",
     "Status",
     "Target",
 ]
 
 type Mode = Literal["idle", "follow", "crowd"]
+type Side = Literal["left", "right"]
 
 
 @dataclass(frozen=True)
@@ -55,16 +57,19 @@ class Cancel:
 
 @dataclass(frozen=True)
 class Enter:
-    """Show the character at ``t``, on the venue's monotonic clock."""
+    """Show the character at ``t``, on the venue's monotonic clock. On a handoff, ``side`` is
+    the edge it comes in from, the one facing the screen it left; otherwise it just appears."""
 
     t: float
+    side: Side | None = None
 
 
 @dataclass(frozen=True)
 class Exit:
-    """Stop showing it at ``t``."""
+    """Stop showing it at ``t``. On a handoff, ``side`` is the edge it leaves through."""
 
     t: float
+    side: Side | None = None
 
 
 type ScreenCmd = Idle | Prepare | Cancel | Enter | Exit

@@ -58,10 +58,10 @@ def _json(cmd: ScreenCmd) -> dict[str, Any]:
             return {"type": "prepare"}
         case Cancel():
             return {"type": "cancel"}
-        case Enter(t):
-            return {"type": "enter", "t": t}
-        case Exit(t):
-            return {"type": "exit", "t": t}
+        case Enter(t, side):
+            return {"type": "enter", "t": t, "side": side}
+        case Exit(t, side):
+            return {"type": "exit", "t": t, "side": side}
 
 
 def display(
