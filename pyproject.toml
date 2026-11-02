@@ -27,7 +27,14 @@ Homepage = "https://github.com/hanishi/koi-signage"
 Issues = "https://github.com/hanishi/koi-signage/issues"
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "pytest-asyncio>=0.24", "pyright>=1.1.380", "ruff>=0.17", "httpx2"]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.24",
+    "pytest-timeout>=2.3",
+    "pyright>=1.1.380",
+    "ruff>=0.17",
+    "httpx2",
+]
 
 [build-system]
 requires = ["setuptools>=68"]
@@ -44,6 +51,8 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 pythonpath = ["src", "tests"]
 testpaths = ["tests"]
+# the suite takes about 2 s: a test still running after 10 s is stuck, so fail it, don't wait
+timeout = 10
 
 [tool.pyright]
 include = ["src", "tests"]

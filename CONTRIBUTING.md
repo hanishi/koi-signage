@@ -31,6 +31,9 @@ page or `koi.js`, restart it to see the change.
 
 - **Nothing may outlive a test.** The autouse fixture in `tests/conftest.py` fails every test
   that leaves an asyncio task running. Start actors inside `async with ActorTestKit()`.
+- **A stuck test fails, it doesn't hang.** pytest-timeout fails any test still running after
+  10 s (the whole suite takes about 2 s), with a stack trace showing where it waited. The limit
+  is a guard, not a way to wait.
 - **Wait on a condition, not a duration.**
   - Use `TestProbe` as screens, floors and the character.
   - Use `ManualTime` for every threshold: `tests/util.py`'s `rig()` gives you a character on
