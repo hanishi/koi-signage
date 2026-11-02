@@ -76,10 +76,10 @@ def test_bad_screen_index_rejected() -> None:
 
 
 def test_bad_floor_frame_closes_1003() -> None:
-    # ohra 0.5 bug: a frame the floor already sent (its first status) races the 1003 close, and
-    # starlette 1.x raises WebSocketDisconnected for it, which ohra's send() doesn't suppress.
-    # The socket still closes with 1003; the server logs a traceback. Drop the suppress once
-    # ohra handles it.
+    # ohra 0.5.0 bug: a frame the floor tells as the 1003 close goes out makes send() raise
+    # starlette's send-after-close error out of the route. The socket still closes with 1003; the
+    # server logs a traceback. Fixed in ohra's websocket-send-after-close branch (3293174): drop
+    # the suppress once signage depends on an ohra release with it.
     with (
         TestClient(create_app(V)) as client,
         contextlib.suppress(WebSocketDisconnected),
