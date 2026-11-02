@@ -1,11 +1,30 @@
 [project]
-name = "signage"
+name = "koi-signage"
 version = "0.1.0"
-description = "Venue runtime for people-reactive signage on ohra: a character that idles, follows one person, or moves toward a crowd across three screens."
+description = "People-reactive signage on ohra actors: a koi that idles, follows one person, or swims toward a crowd across three screens, driven by an mmWave radar (or your mouse)."
+readme = "README.md"
 license = "Apache-2.0"
 authors = [{ name = "Haruhiko Nishi" }]
 requires-python = ">=3.12"
 dependencies = ["ohra[web]>=0.5.1"]
+keywords = ["signage", "digital-signage", "actors", "ohra", "mmwave", "ld2450", "raspberry-pi", "koi"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: AsyncIO",
+    "Framework :: FastAPI",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Graphics",
+    "Topic :: System :: Hardware",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/hanishi/koi-signage"
+Issues = "https://github.com/hanishi/koi-signage/issues"
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "pytest-asyncio>=0.24", "pyright>=1.1.380", "ruff>=0.17", "httpx2"]
@@ -18,7 +37,7 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [tool.setuptools.package-data]
-signage = ["py.typed", "static/*"]
+koi_signage = ["py.typed", "static/*"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

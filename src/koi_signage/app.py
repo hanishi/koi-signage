@@ -1,6 +1,6 @@
 """The venue as a web app: the guardian, the floor and screen WebSockets, and the pages.
 
-    uv run uvicorn --factory signage.app:from_env --host 0.0.0.0 --port 8124
+    uv run uvicorn --factory koi_signage.app:from_env --host 0.0.0.0 --port 8124
 
 Then open / on a laptop, or /screen?n=0..2 on each tablet."""
 
@@ -16,10 +16,10 @@ from fastapi.responses import HTMLResponse, Response
 from ohra import ActorContext, ActorRef, ActorSystem, Behavior, Behaviors
 from ohra.ext.fastapi import Actors
 
-from signage.character import CharacterMsg, character
-from signage.display import decode_screen, display
-from signage.floor import decode_floor, floor
-from signage.venue import SCREENS, Venue, load_venue
+from koi_signage.character import CharacterMsg, character
+from koi_signage.display import decode_screen, display
+from koi_signage.floor import decode_floor, floor
+from koi_signage.venue import SCREENS, Venue, load_venue
 
 STATIC = Path(__file__).parent / "static"
 
@@ -72,9 +72,9 @@ def guardian(make_character: Callable[[], Behavior[CharacterMsg]]) -> Behavior[G
 
 
 def create_app(venue: Venue) -> FastAPI:
-    actors = Actors(guardian(lambda: character(venue)), "signage")
+    actors = Actors(guardian(lambda: character(venue)), "koi-signage")
     app = FastAPI(
-        title="signage", lifespan=actors.lifespan, exception_handlers=actors.exception_handlers
+        title="koi-signage", lifespan=actors.lifespan, exception_handlers=actors.exception_handlers
     )
     index = (STATIC / "index.html").read_text()
     screen_page = (STATIC / "screen.html").read_text()

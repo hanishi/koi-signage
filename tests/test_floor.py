@@ -3,9 +3,9 @@ from typing import Any
 import pytest
 from ohra.testkit import ActorTestKit, ManualTime, TestProbe
 
-from signage.character import CharacterMsg
-from signage.floor import MaxDistance, Pointer, clamp, decode_floor, floor
-from signage.messages import AttachFloor, Frame, Sensed, Status, Target
+from koi_signage.character import CharacterMsg
+from koi_signage.floor import MaxDistance, Pointer, clamp, decode_floor, floor
+from koi_signage.messages import AttachFloor, Frame, Sensed, Status, Target
 from util import V
 
 

@@ -9,9 +9,9 @@ from ohra import ActorRef, Behavior, Behaviors
 from ohra.testkit import ActorTestKit, TestProbe
 from starlette.testclient import WebSocketTestSession
 
-from signage.app import GetCharacter, create_app, guardian
-from signage.character import CharacterMsg
-from signage.messages import Frame
+from koi_signage.app import GetCharacter, create_app, guardian
+from koi_signage.character import CharacterMsg
+from koi_signage.messages import Frame
 from util import V
 
 

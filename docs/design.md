@@ -1,4 +1,4 @@
-# Venue runtime (pointer sensor): design
+# koi-signage: design
 
 Date: 2026-11-02. Source concept:
 [人に反応するサイネージを、Raspberry Pi とミリ波レーダーで作る構想](https://note.com/programmer_llc/n/nc70f6eca15ee).
@@ -16,7 +16,7 @@ Success:
   screens. Clicking drops people who stand still, which drives crowd mode.
 - The 1 s and 3 s thresholds, the boundary dead zone and the handoff are tested on a manual
   clock, with no sleeps.
-- Opening `/screen/N` on a real tablet works with no code change, so the article's sync and
+- Opening `/screen?n=N` on a real tablet works with no code change, so the article's sync and
   kiosk spike checks can run before the radar arrives.
 - Replacing the pointer with the radar means replacing one actor that emits the same `Frame`.
 
@@ -30,7 +30,7 @@ Success:
 | Follow cap (screens or seconds, the creepiness mitigation) | after a first walk-through |
 | Walking-speed lead on the handoff time | latency is measured on tablets |
 | Loop-lag metric | it runs on the Pi |
-| Real creatives: the character is a placeholder glyph | Promovolve supplies assets |
+| Real creatives: the character is a drawn koi (`static/koi.js`) | Promovolve supplies assets |
 
 ## Stack
 
@@ -42,10 +42,10 @@ build step.
 ## Layout
 
 ```
-signage/
+koi-signage/
   pyproject.toml
   venue.toml               # calibration: floor size, zone cuts, thresholds
-  src/signage/
+  src/koi_signage/
     venue.py               # Venue config: load from TOML, zone/screen lookup
     messages.py            # Frame, Target, and every message between actors
     character.py           # the state machine: the only actor that decides
@@ -152,8 +152,9 @@ the character has spent `linger_s` on its current screen, the character moves **
 toward it. A tie means no leader, so the character stays.
 
 **Handoff** from `s` to `s'`. The character sends `Prepare` to `s'` if it hasn't yet, and waits
-for `Ready(s')`, or for `ready_timeout_s`, whichever comes first. Then, with `t = clock() + handoff_lead_s`, it sends `Exit(t)` to `s` and
-`Enter(t)` to `s'`. `clock` is a parameter (default `time.monotonic`, so NTP steps can't move it),
+for `Ready(s')`, or for `ready_timeout_s`, whichever comes first. Then, with `t = clock() + handoff_lead_s`, it sends `Exit(t, side)` to `s` and
+`Enter(t, side)` to `s'`, where `side` is the edge facing the other screen, so the koi leaves
+through one edge and arrives through the facing one. `clock` is a parameter (default `time.monotonic`, so NTP steps can't move it),
 which keeps it testable. If `s'` has no display attached, the character moves anyway and the
 `Enter` is dropped.
 

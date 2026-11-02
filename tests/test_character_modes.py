@@ -1,6 +1,6 @@
 from ohra.testkit import TestProbe
 
-from signage.messages import AttachFloor, Enter, Exit, Idle, Sensed, Status
+from koi_signage.messages import AttachFloor, Enter, Exit, Idle, Sensed, Status
 from util import people, rig
 
 

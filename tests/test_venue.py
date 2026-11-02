@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from signage.venue import Target, boundaries, load_venue, screen_counts, screen_of, zone_of
+from koi_signage.venue import Target, boundaries, load_venue, screen_counts, screen_of, zone_of
 
 V = load_venue(Path(__file__).parent.parent / "venue.toml")
 

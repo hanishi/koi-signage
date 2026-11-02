@@ -6,7 +6,7 @@ from typing import Literal
 
 from ohra import ActorRef
 
-from signage.venue import Target
+from koi_signage.venue import Target
 
 __all__ = [
     "AttachFloor",

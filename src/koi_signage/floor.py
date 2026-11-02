@@ -16,9 +16,9 @@ from typing import Any, cast
 
 from ohra import ActorContext, ActorRef, Behavior, Behaviors
 
-from signage.character import CharacterMsg
-from signage.messages import AttachFloor, Frame, Sensed, Status, Target
-from signage.venue import Venue, in_view
+from koi_signage.character import CharacterMsg
+from koi_signage.messages import AttachFloor, Frame, Sensed, Status, Target
+from koi_signage.venue import Venue, in_view
 
 MAX_TARGETS = 3  # the LD2450 tracks at most 3 people
 FRAME_INTERVAL_S = 0.1  # the LD2450 reports at about 10 fps

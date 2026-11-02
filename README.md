@@ -1,25 +1,28 @@
-# signage
+# koi-signage
 
-The venue runtime for people-reactive signage, on [ohra](https://github.com/hanishi/ohra). It is
-the Raspberry Pi side of
-[人に反応するサイネージを、Raspberry Pi とミリ波レーダーで作る構想](https://note.com/programmer_llc/n/nc70f6eca15ee).
+People-reactive signage on [ohra](https://github.com/hanishi/ohra) actors. A koi lives in three
+screens side by side and reacts to the people in front of them:
+- With nobody there, it wanders deep below, faint.
+- With one person, it rises and follows them from screen to screen, swimming across the gap.
+- With several, it swims toward the busiest screen.
 
-A character plays across three screens:
-- With nobody there, it idles.
-- With one person, it follows them from screen to screen.
-- With several, it moves toward the busiest screen.
+![Someone walks along the floor and the koi follows them across three screens](docs/koi.gif)
 
-Until the HLK-LD2450 radar is here, the mouse pointer on a web page stands in for it. Everything
-after the sensor is the real code:
+The sensor is an HLK-LD2450 mmWave radar on a Raspberry Pi. Until one is plugged in, the mouse
+pointer on a web page stands in for it, so you can try the whole thing with a laptop and any
+phones or tablets on the same Wi-Fi. Everything after the sensor is the real code:
 - the character's state machine
 - the screen-to-screen handoff
-- the tablets' clock sync
+- the screens' clock sync
+
+The idea is written up (in Japanese) in
+[人に反応するサイネージを、Raspberry Pi とミリ波レーダーで作る構想](https://note.com/programmer_llc/n/nc70f6eca15ee).
 
 ## Run
 
 ```
 uv sync --all-extras
-uv run uvicorn --factory signage.app:from_env --host 0.0.0.0 --port 8124
+uv run uvicorn --factory koi_signage.app:from_env --host 0.0.0.0 --port 8124
 ```
 
 - **http://localhost:8124/** shows the three screens above the floor.
@@ -35,6 +38,27 @@ uv run uvicorn --factory signage.app:from_env --host 0.0.0.0 --port 8124
   the sync, latency and kiosk checks need.
 
 `--host 0.0.0.0` lets tablets on the LAN connect. Use `127.0.0.1` to keep it on this machine.
+To find the address to type on a phone, run `ipconfig getifaddr en0` (macOS) or `hostname -I`
+(Linux), and open `http://<that address>:8124/screen?n=0`.
+
+Line the screens up left to right as 0, 1, 2. Any number of devices can show the same screen
+number: they mirror each other.
+
+## The koi
+
+`src/koi_signage/static/koi.js` draws it on a canvas, from above, about 60 times a second. There
+are no image files.
+- **Spine:** a chain of 18 points. The head steers toward a target and each point follows the one
+  ahead, so the body bends as it turns. A wave runs down the chain as it swims.
+- **Body:** a width profile along the spine gives the outline. The markings are defined in body
+  coordinates (along and across), so they bend with it.
+- **Depth:** one value fades and blurs it from the surface down to the deep, where it waits
+  while the venue idles.
+- **Handoff:** the leaving screen's koi reaches its edge 0.9 s after the handoff time. The next
+  screen's koi starts in from the facing edge at that same moment, on the shared clock, so it
+  seems to swim across.
+
+Change the colours, `halfWidth` or the patches at the top of `koi.js` for a different fish.
 
 ## Actors
 
@@ -46,8 +70,7 @@ uv run uvicorn --factory signage.app:from_env --host 0.0.0.0 --port 8124
 | Display (one per screen socket) | commands to its tablet, the tablet's ready back, and clock pings |
 
 The LD2450 actor will replace Floor and send the same `Frame`. The
-[design](docs/superpowers/specs/2026-11-02-venue-runtime-design.md) maps this tree against the
-article's.
+[design](docs/design.md) maps this tree against the article's.
 
 ## Calibration
 
@@ -78,9 +101,11 @@ nearest it sees them.
 | Loop-lag metric | it runs on the Pi |
 | Real creatives: the character is a drawn koi (`static/koi.js`) | Promovolve supplies assets |
 
-## Checks
+## Contributing
 
-```
-uv run ruff format && uv run ruff check && uv run pyright && uv run pytest
-node --test tests/js   # the tablets' clock-offset estimate
-```
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the checks, how the tests are written, and the rules
+the code keeps.
+
+## License
+
+[Apache-2.0](LICENSE)

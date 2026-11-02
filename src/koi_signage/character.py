@@ -10,7 +10,7 @@ from typing import Literal
 
 from ohra import ActorContext, ActorRef, Behavior, Behaviors, TimerScheduler
 
-from signage.messages import (
+from koi_signage.messages import (
     AttachFloor,
     AttachScreen,
     Cancel,
@@ -25,7 +25,7 @@ from signage.messages import (
     Sensed,
     Status,
 )
-from signage.venue import SCREENS, Venue, boundaries, screen_counts
+from koi_signage.venue import SCREENS, Venue, boundaries, screen_counts
 
 
 @dataclass(frozen=True)

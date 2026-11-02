@@ -4,9 +4,9 @@ import pytest
 from ohra import ActorRef
 from ohra.testkit import ActorTestKit, TestProbe
 
-from signage.character import CharacterMsg
-from signage.display import DisplayMsg, PageReady, Ping, decode_screen, display
-from signage.messages import AttachScreen, Cancel, Enter, Exit, Idle, Prepare, Ready
+from koi_signage.character import CharacterMsg
+from koi_signage.display import DisplayMsg, PageReady, Ping, decode_screen, display
+from koi_signage.messages import AttachScreen, Cancel, Enter, Exit, Idle, Prepare, Ready
 
 
 async def spawned(

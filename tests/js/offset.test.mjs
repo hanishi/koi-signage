@@ -1,7 +1,7 @@
 // node --test tests/js: the clock-offset estimate screen.js uses.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { SAMPLE_WINDOW, offsetFrom } from "../../src/signage/static/screen.js";
+import { SAMPLE_WINDOW, offsetFrom } from "../../src/koi_signage/static/screen.js";
 
 // a sample: the page sent the ping at c and got the pong at r (page clock); the server said s
 const sample = (c, rtt, offset) => ({ c, r: c + rtt, s: c + rtt / 2 + offset });

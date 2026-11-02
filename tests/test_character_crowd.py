@@ -1,4 +1,4 @@
-from signage.messages import Enter, Exit, Prepare, Ready, Status
+from koi_signage.messages import Enter, Exit, Prepare, Ready, Status
 from util import Rig, people, rig
 
 

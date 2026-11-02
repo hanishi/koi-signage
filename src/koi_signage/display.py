@@ -11,9 +11,9 @@ from typing import Any, cast
 
 from ohra import ActorContext, ActorRef, Behavior, Behaviors
 
-from signage.character import CharacterMsg
-from signage.floor import finite_number
-from signage.messages import AttachScreen, Cancel, Enter, Exit, Idle, Prepare, Ready, ScreenCmd
+from koi_signage.character import CharacterMsg
+from koi_signage.floor import finite_number
+from koi_signage.messages import AttachScreen, Cancel, Enter, Exit, Idle, Prepare, Ready, ScreenCmd
 
 
 @dataclass(frozen=True)

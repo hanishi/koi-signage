@@ -1,5 +1,5 @@
-from signage.character import follow_step
-from signage.messages import Cancel, Enter, Exit, Prepare, Ready, Status
+from koi_signage.character import follow_step
+from koi_signage.messages import Cancel, Enter, Exit, Prepare, Ready, Status
 from util import V, people, rig
 
 

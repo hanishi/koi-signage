@@ -9,8 +9,8 @@ from typing import Any
 from ohra import ActorRef
 from ohra.testkit import ActorTestKit, ManualTime, TestProbe
 
-from signage.character import CharacterMsg, character
-from signage.messages import (
+from koi_signage.character import CharacterMsg, character
+from koi_signage.messages import (
     AttachFloor,
     AttachScreen,
     Enter,
@@ -21,7 +21,7 @@ from signage.messages import (
     Status,
     Target,
 )
-from signage.venue import load_venue
+from koi_signage.venue import load_venue
 
 V = load_venue(Path(__file__).parent.parent / "venue.toml")
 
