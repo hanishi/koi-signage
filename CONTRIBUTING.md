@@ -19,7 +19,7 @@ uv run ruff format   # PEP 8 layout, lines up to 99 characters
 uv run ruff check
 uv run pyright       # strict mode, 0 errors
 uv run pytest        # every test fails if any asyncio task outlives it (tests/conftest.py)
-node --test tests/js # the screens' clock-offset estimate
+node --test tests/js/*.test.mjs  # the screens' clock-offset estimate
 ```
 
 `ruff format` leaves comments, docstrings and strings alone, so wrap those yourself.
