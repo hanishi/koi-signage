@@ -1,8 +1,0 @@
-pyproject.toml
-src/signage/__init__.py
-src/signage/py.typed
-src/signage.egg-info/PKG-INFO
-src/signage.egg-info/SOURCES.txt
-src/signage.egg-info/dependency_links.txt
-src/signage.egg-info/requires.txt
-src/signage.egg-info/top_level.txt
