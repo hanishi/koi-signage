@@ -7,6 +7,11 @@ depth_m = 4.0
 zone_cuts_m = [1, 2, 3, 4, 5, 6, 7, 8]   # 9 zones along the corridor; 3 per screen, left to right
 max_distance_m = 3.0   # further from the screens than this is ignored (the floor page has a slider)
 
+[radar]                 # one HLK-LD2450 on the screen line, facing the floor
+x_m = 4.5               # where along the corridor it is mounted
+range_m = 6.0           # it sees this far, measured from the sensor
+fov_deg = 120.0         # and this wide: ±60° either side of straight out
+
 [character]
 follow_after_s = 1.0    # 1 person this long → Follow
 crowd_after_s = 1.0     # 2+ this long → Crowd

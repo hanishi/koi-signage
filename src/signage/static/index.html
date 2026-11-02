@@ -39,6 +39,7 @@
     border-top: 2px dashed #ff8a5b; background: repeating-linear-gradient(135deg, #ff8a5b0d 0 8px, transparent 8px 16px); }
   .beyond span { position: absolute; left: 6px; top: 4px; font: 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: #ff8a5b; }
   .dot.far, .tag.far { opacity: .35; }
+  .radar { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   #reach-control { display: flex; align-items: center; gap: 10px; color: var(--muted); }
   #reach-control input { flex: 1; max-width: 360px; accent-color: #ff8a5b; }
   #reach-control b { color: var(--text); font: 600 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace; min-width: 5ch; }
@@ -115,6 +116,26 @@
     floorEl.append(cut);
   });
 
+  // What the LD2450 sees: a sector from where it is mounted on the screen line, ±fov/2 either
+  // side of straight out, to range_m. Outside it is shaded: nobody there is seen.
+  const radar = venue.radar;
+  const half = (radar.fov_deg / 2) * (Math.PI / 180);
+  const inView = (p) => {
+    const dx = p.x - radar.x_m;
+    return Math.hypot(dx, p.y) <= radar.range_m && Math.atan2(Math.abs(dx), p.y) <= half;
+  };
+  {
+    const R = radar.range_m, sx = radar.x_m;
+    const [x1, x2, y] = [sx - R * Math.sin(half), sx + R * Math.sin(half), R * Math.cos(half)];
+    const sector = `M ${sx} 0 L ${x1} ${y} A ${R} ${R} 0 ${half > Math.PI / 2 ? 1 : 0} 0 ${x2} ${y} Z`;
+    floorEl.insertAdjacentHTML("beforeend", `
+      <svg class="radar" viewBox="0 0 ${venue.width_m} ${venue.depth_m}" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M 0 0 H ${venue.width_m} V ${venue.depth_m} H 0 Z ${sector}" fill="#05070a" fill-opacity=".6" fill-rule="evenodd"/>
+        <path d="${sector}" fill="none" stroke="#4f8cff" stroke-opacity=".55" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+        <circle cx="${sx}" cy="0" r="0.09" fill="#4f8cff"/>
+      </svg>`);
+  }
+
   let pointer = null;
   const standing = [];
   const MAX_STANDING = 2;
@@ -152,6 +173,7 @@
   const slider = document.getElementById("reach");
   slider.max = venue.depth_m;
   const far = (p) => reach !== null && p.y > reach;
+  const why = (p) => (!inView(p) ? "out of the radar's view" : far(p) ? "too far" : null);
 
   function showReach(m) {
     reach = m;
@@ -174,7 +196,7 @@
       const left = `${(p.x / venue.width_m) * 100}%`;
       const top = `${(p.y / venue.depth_m) * 100}%`;
       const d = document.createElement("div");
-      const ignored = far(p) ? "far" : "";
+      const ignored = why(p) ? "far" : "";
       d.className = `dot ${kind} ${ignored}`;
       d.style.left = left;
       d.style.top = top;
@@ -182,7 +204,7 @@
       tag.className = `tag ${kind} ${ignored}`;
       tag.style.left = left;
       tag.style.top = top;
-      tag.textContent = metresText(p.y) + (ignored ? " · ignored" : "");
+      tag.textContent = metresText(p.y) + (!inView(p) ? ", unseen" : ignored ? ", ignored" : "");
       floorEl.append(d, tag);
     }
     const list = document.getElementById("people");
@@ -190,10 +212,11 @@
       const li = document.createElement("li");
       const who = kind === "pointer" ? "pointer" : `standing ${i + (pointer ? 0 : 1)}`;
       li.innerHTML = `${who}: <b>${metresText(p.y)}</b> away · x ${metresText(p.x)} · `
-        + (far(p) ? "ignored, too far" : `screen ${screenOf(p.x)}`);
+        + (why(p) ? `ignored, ${why(p)}` : `screen ${screenOf(p.x)}`);
       return li;
     }));
-    const nearest = people.length ? Math.min(...people.map(([p]) => p.y)) : null;
+    const counted = people.filter(([p]) => !why(p));
+    const nearest = counted.length ? Math.min(...counted.map(([p]) => p.y)) : null;
     document.getElementById("nearest").textContent = nearest === null ? "–" : metresText(nearest);
   }
 

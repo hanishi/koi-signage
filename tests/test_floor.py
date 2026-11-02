@@ -37,14 +37,23 @@ def test_decode_floor_accepts() -> None:
 
 
 def test_clamp() -> None:
-    five = [Target(x, 1) for x in (1, 2, 3, 4, 5)]
+    five = [Target(x, 1) for x in (3.5, 4, 4.5, 5, 5.5)]
     assert clamp(V, five, 4) == tuple(five[:3])
-    off = [Target(-0.1, 1), Target(1, 4.1), Target(9.1, 1), Target(1, -0.1), Target(9, 4)]
-    assert clamp(V, off, 4) == (Target(9, 4),)
+    off = [Target(-0.1, 1), Target(1, 4.1), Target(9.1, 1), Target(1, -0.1), Target(4.5, 4)]
+    assert clamp(V, off, 4) == (Target(4.5, 4),)
+
+
+def test_clamp_keeps_only_what_the_radar_sees() -> None:
+    """The LD2450 at x = 4.5 m on the screen line sees ±60° out to 6 m."""
+    beside = Target(1.0, 0.5)  # 82° off straight out: close to screen 0, but out of view
+    wide = Target(1.0, 3.0)  # 49° off, 4.6 m away: seen
+    corner = Target(9.0, 4.0)  # 6.02 m away: out of range
+    ahead = Target(4.5, 0.0)  # right in front of the sensor: seen
+    assert clamp(V, [beside, wide, corner, ahead], 4) == (wide, ahead)
 
 
 def test_clamp_drops_people_beyond_max_distance_before_taking_3() -> None:
-    near, far = [Target(x, 1) for x in (1, 2, 3)], [Target(5, 2.5), Target(6, 2.01)]
+    near, far = [Target(x, 1) for x in (4, 4.5, 5)], [Target(5, 2.5), Target(6, 2.01)]
     assert clamp(V, [*far, *near], 2.0) == tuple(near)
     assert clamp(V, [Target(4, 2.0)], 2.0) == (Target(4, 2.0),)  # on the line still counts
 

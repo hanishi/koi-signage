@@ -100,7 +100,8 @@ floor page ──ws──▶ Floor (sensor) ──Frame @10fps──▶ Characte
   `{targets: [{x, y}, ...]}` whenever the pointer moves or a click adds or removes a person. The
   actor keeps the latest set and emits a `Frame` to Character on a 100 ms timer, whether or not
   anything moved, as the radar does. Input is clamped server-side: points outside the floor or
-  further than the max distance are dropped, then at most 3 targets are kept. The max distance
+  further than the max distance or outside the radar's sector (`[radar]`: mounting x, range,
+  field of view) are dropped, then at most 3 targets are kept. The max distance
   starts at `max_distance_m` and changes with the page's `{max_distance_m: n}` (clamped to
   `[0, depth_m]`). The actor sends `{type: "settings", max_distance_m}` on start and after each
   change. The LD2450's own region filter does the same job on the hardware. It sends `AttachFloor(self)` on start and forwards the `Status`

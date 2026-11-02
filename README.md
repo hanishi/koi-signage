@@ -60,6 +60,12 @@ Someone walking past along the far wall doesn't wake the character. The slider u
 changes it live for that page's connection. The floor shows the cut-off as a dashed line and dims
 anyone beyond it. Copy a value you like into `venue.toml`: a restart starts from the file again.
 
+`[radar]` is the LD2450's view: where it sits on the screen line, its range (6 m) and its field of
+view (120°, ±60° from straight out). Only what is inside that sector counts. The floor page
+shades everything outside it. With one sensor in the middle, people standing close to the side
+screens are out of its view: about 1.7 m out in front of the middle of screen 0 or 2 is the
+nearest it sees them.
+
 ## Not yet
 
 | Left out | Add when |

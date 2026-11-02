@@ -11,6 +11,7 @@ def test_loads_repo_venue() -> None:
     assert V.zone_cuts_m == (1, 2, 3, 4, 5, 6, 7, 8)
     assert V.ready_timeout_s == 1.0
     assert V.max_distance_m == 3.0
+    assert (V.radar_x_m, V.radar_range_m, V.radar_fov_deg) == (4.5, 6.0, 120.0)
 
 
 def test_zone_and_screen_at_cuts() -> None:
@@ -46,5 +47,21 @@ def test_rejects_bad_cuts(tmp_path: Path, cuts: str) -> None:
 def test_rejects_max_distance_off_the_floor(tmp_path: Path, m: str) -> None:
     bad = tmp_path / "venue.toml"
     bad.write_text(GOOD.replace("max_distance_m = 3.0", f"max_distance_m = {m}"))
+    with pytest.raises(ValueError):
+        load_venue(bad)
+
+
+@pytest.mark.parametrize(
+    ("old", "new"),
+    [
+        ("x_m = 4.5", "x_m = 9.5"),  # off the screen line
+        ("range_m = 6.0", "range_m = 0"),
+        ("fov_deg = 120.0", "fov_deg = 181"),
+        ("fov_deg = 120.0", "fov_deg = 0"),
+    ],
+)
+def test_rejects_bad_radar(tmp_path: Path, old: str, new: str) -> None:
+    bad = tmp_path / "venue.toml"
+    bad.write_text(GOOD.replace(old, new))
     with pytest.raises(ValueError):
         load_venue(bad)

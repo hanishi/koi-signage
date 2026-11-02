@@ -56,6 +56,7 @@ def test_venue_for_the_page() -> None:
             "width_m": 9.0,
             "depth_m": 4.0,
             "zone_cuts_m": [1, 2, 3, 4, 5, 6, 7, 8],
+            "radar": {"x_m": 4.5, "range_m": 6.0, "fov_deg": 120.0},
         }
 
 

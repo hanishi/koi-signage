@@ -104,6 +104,11 @@ def create_app(venue: Venue) -> FastAPI:
             "width_m": venue.width_m,
             "depth_m": venue.depth_m,
             "zone_cuts_m": list(venue.zone_cuts_m),
+            "radar": {
+                "x_m": venue.radar_x_m,
+                "range_m": venue.radar_range_m,
+                "fov_deg": venue.radar_fov_deg,
+            },
         }
 
     @app.websocket("/ws/floor")

@@ -18,7 +18,7 @@ from ohra import ActorContext, ActorRef, Behavior, Behaviors
 
 from signage.character import CharacterMsg
 from signage.messages import AttachFloor, Frame, Sensed, Status, Target
-from signage.venue import Venue
+from signage.venue import Venue, in_view
 
 MAX_TARGETS = 3  # the LD2450 tracks at most 3 people
 FRAME_INTERVAL_S = 0.1  # the LD2450 reports at about 10 fps
@@ -79,11 +79,10 @@ def decode_floor(text: str) -> Pointer | MaxDistance:
 
 
 def clamp(v: Venue, targets: Sequence[Target], max_distance_m: float) -> tuple[Target, ...]:
-    """Drop points off the floor or further than ``max_distance_m``, then keep the first 3, as
-    the radar would."""
-    on = [
-        t for t in targets if 0 <= t.x <= v.width_m and 0 <= t.y <= min(max_distance_m, v.depth_m)
-    ]
+    """Drop points off the floor, out of the radar's view or further than ``max_distance_m``,
+    then keep the first 3, as the radar would."""
+    reach = min(max_distance_m, v.depth_m)
+    on = [t for t in targets if 0 <= t.x <= v.width_m and 0 <= t.y <= reach and in_view(v, t)]
     return tuple(on[:MAX_TARGETS])
 
 
