@@ -40,7 +40,7 @@ class _CharacterGone:
 type FloorMsg = Pointer | Status | _Tick | _CharacterGone
 
 
-def _number(v: object) -> float:
+def finite_number(v: object) -> float:
     if isinstance(v, bool) or not isinstance(v, int | float) or not math.isfinite(v):
         raise ValueError(f"not a finite number: {v!r}")
     return float(v)
@@ -60,7 +60,7 @@ def decode_floor(text: str) -> Pointer:
         if not isinstance(t, dict):
             raise ValueError("expected a target object")
         point = cast(dict[str, object], t)
-        out.append(Target(_number(point.get("x")), _number(point.get("y"))))
+        out.append(Target(finite_number(point.get("x")), finite_number(point.get("y"))))
     return Pointer(tuple(out))
 
 
