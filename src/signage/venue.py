@@ -26,6 +26,7 @@ class Venue:
     width_m: float
     depth_m: float
     zone_cuts_m: tuple[float, ...]
+    max_distance_m: float
     follow_after_s: float
     crowd_after_s: float
     idle_after_s: float
@@ -38,7 +39,7 @@ class Venue:
 
 def load_venue(path: Path) -> Venue:
     """Read ``venue.toml``. Raises ValueError unless there are 8 strictly increasing zone cuts,
-    all inside the floor."""
+    all inside the floor, and max_distance_m is in (0, depth_m]."""
     with path.open("rb") as f:
         doc = tomllib.load(f)
     floor, ch = doc["floor"], doc["character"]
@@ -48,10 +49,14 @@ def load_venue(path: Path) -> Venue:
         raise ValueError(f"zone_cuts_m needs {ZONES_PER_SCREEN * SCREENS - 1} cuts")
     if any(a >= b for a, b in zip((0.0, *cuts), (*cuts, width))):
         raise ValueError("zone_cuts_m must increase strictly, inside (0, width_m)")
+    depth, reach = float(floor["depth_m"]), float(floor["max_distance_m"])
+    if not 0 < reach <= depth:
+        raise ValueError("max_distance_m must be in (0, depth_m]")
     return Venue(
         width_m=width,
-        depth_m=float(floor["depth_m"]),
+        depth_m=depth,
         zone_cuts_m=cuts,
+        max_distance_m=reach,
         follow_after_s=float(ch["follow_after_s"]),
         crowd_after_s=float(ch["crowd_after_s"]),
         idle_after_s=float(ch["idle_after_s"]),

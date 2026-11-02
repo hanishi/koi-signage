@@ -4,7 +4,7 @@ import pytest
 from ohra.testkit import ActorTestKit, ManualTime, TestProbe
 
 from signage.character import CharacterMsg
-from signage.floor import Pointer, clamp, decode_floor, floor
+from signage.floor import MaxDistance, Pointer, clamp, decode_floor, floor
 from signage.messages import AttachFloor, Frame, Sensed, Status, Target
 from util import V
 
@@ -21,6 +21,8 @@ from util import V
         '{"targets": [3]}',
         '{"targets": 3}',
         "[]",
+        '{"max_distance_m": NaN}',
+        '{"max_distance_m": "2"}',
     ],
 )
 def test_decode_floor_rejects(text: str) -> None:
@@ -31,13 +33,20 @@ def test_decode_floor_rejects(text: str) -> None:
 def test_decode_floor_accepts() -> None:
     text = '{"targets": [{"x": 4, "y": 1.5}]}'
     assert decode_floor(text) == Pointer((Target(4, 1.5),))
+    assert decode_floor('{"max_distance_m": 2.5}') == MaxDistance(2.5)
 
 
 def test_clamp() -> None:
     five = [Target(x, 1) for x in (1, 2, 3, 4, 5)]
-    assert clamp(V, five) == tuple(five[:3])
+    assert clamp(V, five, 4) == tuple(five[:3])
     off = [Target(-0.1, 1), Target(1, 4.1), Target(9.1, 1), Target(1, -0.1), Target(9, 4)]
-    assert clamp(V, off) == (Target(9, 4),)
+    assert clamp(V, off, 4) == (Target(9, 4),)
+
+
+def test_clamp_drops_people_beyond_max_distance_before_taking_3() -> None:
+    near, far = [Target(x, 1) for x in (1, 2, 3)], [Target(5, 2.5), Target(6, 2.01)]
+    assert clamp(V, [*far, *near], 2.0) == tuple(near)
+    assert clamp(V, [Target(4, 2.0)], 2.0) == (Target(4, 2.0),)  # on the line still counts
 
 
 async def spawned(
@@ -47,6 +56,7 @@ async def spawned(
     out: TestProbe[dict[str, Any]] = testkit.create_test_probe()
     ref = testkit.spawn(floor(V, character.ref, out.ref))
     await character.expect_message(AttachFloor(ref))
+    await out.expect_message({"type": "settings", "max_distance_m": V.max_distance_m})
     return character, out, ref
 
 
@@ -79,3 +89,22 @@ async def test_stops_when_character_stops() -> None:
         watcher: TestProbe[None] = testkit.create_test_probe()
         character.stop()
         await watcher.expect_terminated(ref)
+
+
+async def test_max_distance_from_the_page_takes_effect_and_is_echoed() -> None:
+    async with ActorTestKit(manual_time=True) as testkit:
+        character, out, ref = await spawned(testkit)
+        ref.tell(Pointer((Target(4, 1), Target(5, 2))))
+        ref.tell(MaxDistance(1.5))
+        await out.expect_message({"type": "settings", "max_distance_m": 1.5})
+        await ManualTime(testkit.system).time_passes(0.1)
+        await character.expect_message(Sensed(ref, Frame((Target(4, 1),))))
+
+
+async def test_max_distance_kept_on_the_floor() -> None:
+    async with ActorTestKit(manual_time=True) as testkit:
+        _, out, ref = await spawned(testkit)
+        ref.tell(MaxDistance(99))
+        await out.expect_message({"type": "settings", "max_distance_m": V.depth_m})
+        ref.tell(MaxDistance(-1))
+        await out.expect_message({"type": "settings", "max_distance_m": 0.0})

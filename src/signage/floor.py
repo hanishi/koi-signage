@@ -2,7 +2,11 @@
 
 The page sends where people are whenever that changes. This actor keeps the latest set and sends
 Character a Frame every 100 ms, moving or not, as the LD2450 does. The LD2450 actor replaces this
-one and sends the same Frame."""
+one and sends the same Frame.
+
+People further from the screens than ``max_distance_m`` are dropped here, as the LD2450's own
+region filter would drop them. The page's slider changes it for this connection only; venue.toml
+sets where every connection starts."""
 
 import json
 import math
@@ -28,6 +32,13 @@ class Pointer:
 
 
 @dataclass(frozen=True)
+class MaxDistance:
+    """From the page's slider: ignore people further from the screens than ``m`` metres."""
+
+    m: float
+
+
+@dataclass(frozen=True)
 class _Tick:
     pass
 
@@ -37,7 +48,7 @@ class _CharacterGone:
     pass
 
 
-type FloorMsg = Pointer | Status | _Tick | _CharacterGone
+type FloorMsg = Pointer | MaxDistance | Status | _Tick | _CharacterGone
 
 
 def finite_number(v: object) -> float:
@@ -46,13 +57,16 @@ def finite_number(v: object) -> float:
     return float(v)
 
 
-def decode_floor(text: str) -> Pointer:
-    """``{"targets": [{"x": n, "y": n}, ...]}``. Anything else raises ValueError, which closes the
-    socket with 1003."""
+def decode_floor(text: str) -> Pointer | MaxDistance:
+    """``{"targets": [{"x": n, "y": n}, ...]}`` or ``{"max_distance_m": n}``. Anything else raises
+    ValueError, which closes the socket with 1003."""
     doc: object = json.loads(text)
     if not isinstance(doc, dict):
         raise ValueError("expected an object")
-    targets = cast(dict[str, object], doc).get("targets")
+    fields = cast(dict[str, object], doc)
+    if "max_distance_m" in fields:
+        return MaxDistance(finite_number(fields["max_distance_m"]))
+    targets = fields.get("targets")
     if not isinstance(targets, list):
         raise ValueError("expected a list of targets")
     out: list[Target] = []
@@ -64,9 +78,12 @@ def decode_floor(text: str) -> Pointer:
     return Pointer(tuple(out))
 
 
-def clamp(v: Venue, targets: Sequence[Target]) -> tuple[Target, ...]:
-    """Drop points off the floor, then keep the first 3, as the radar would."""
-    on = [t for t in targets if 0 <= t.x <= v.width_m and 0 <= t.y <= v.depth_m]
+def clamp(v: Venue, targets: Sequence[Target], max_distance_m: float) -> tuple[Target, ...]:
+    """Drop points off the floor or further than ``max_distance_m``, then keep the first 3, as
+    the radar would."""
+    on = [
+        t for t in targets if 0 <= t.x <= v.width_m and 0 <= t.y <= min(max_distance_m, v.depth_m)
+    ]
     return tuple(on[:MAX_TARGETS])
 
 
@@ -78,13 +95,22 @@ def floor(
         ctx.watch_with(character, _CharacterGone())  # a new character means a fresh page
         ctx.timers.start_timer_with_fixed_delay("tick", _Tick(), FRAME_INTERVAL_S)
 
-        def run(latest: tuple[Target, ...]) -> Behavior[FloorMsg]:
+        def settings(reach: float) -> None:
+            out.tell({"type": "settings", "max_distance_m": reach})
+
+        def run(latest: tuple[Target, ...], reach: float) -> Behavior[FloorMsg]:
+            """``latest`` is what the page sent, unfiltered, so a new reach applies to it."""
+
             def on_message(_ctx: ActorContext[FloorMsg], msg: FloorMsg) -> Behavior[FloorMsg]:
                 match msg:
                     case Pointer(targets):
-                        return run(clamp(venue, targets))
+                        return run(targets, reach)
+                    case MaxDistance(m):
+                        m = min(max(m, 0.0), venue.depth_m)
+                        settings(m)
+                        return run(latest, m)
                     case _Tick():
-                        character.tell(Sensed(ctx.self, Frame(latest)))
+                        character.tell(Sensed(ctx.self, Frame(clamp(venue, latest, reach))))
                         return Behaviors.same
                     case Status(mode, count, screen):
                         out.tell(
@@ -96,6 +122,7 @@ def floor(
 
             return Behaviors.receive(on_message)
 
-        return run(())
+        settings(venue.max_distance_m)
+        return run((), venue.max_distance_m)
 
     return Behaviors.setup(setup)

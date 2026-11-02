@@ -35,6 +35,13 @@
   #devices button:hover { border-color: var(--edge); }
   #devices a { color: var(--edge); margin-left: auto; }
   body.floor-only .screens { display: none; }
+  .beyond { position: absolute; left: 0; right: 0; bottom: 0; pointer-events: none;
+    border-top: 2px dashed #ff8a5b; background: repeating-linear-gradient(135deg, #ff8a5b0d 0 8px, transparent 8px 16px); }
+  .beyond span { position: absolute; left: 6px; top: 4px; font: 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: #ff8a5b; }
+  .dot.far, .tag.far { opacity: .35; }
+  #reach-control { display: flex; align-items: center; gap: 10px; color: var(--muted); }
+  #reach-control input { flex: 1; max-width: 360px; accent-color: #ff8a5b; }
+  #reach-control b { color: var(--text); font: 600 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace; min-width: 5ch; }
 </style>
 </head>
 <body>
@@ -49,6 +56,10 @@
   <div class="screens" id="screens"></div>
   <div class="screens"><div class="label">screen 0</div><div class="label">screen 1</div><div class="label">screen 2</div></div>
   <div id="floor"></div>
+  <label id="reach-control">Ignore people further than
+    <input type="range" id="reach" min="0" step="0.1" disabled>
+    <b id="reach-text">–</b>
+  </label>
   <div id="status">
     <span>mode <b id="mode">–</b></span><span>people <b id="count">–</b></span>
     <span>screen <b id="screen">–</b></span><span>nearest <b id="nearest">–</b></span>
@@ -129,6 +140,33 @@
     floorEl.append(r);
   }
 
+  // The cut-off: the server (the Floor actor) drops anyone further than this before the
+  // character sees them. It sends the value on connect and after every change, so the line
+  // shows what is in force, not just where the slider is.
+  let reach = null;
+  const beyond = document.createElement("div");
+  beyond.className = "beyond";
+  beyond.hidden = true;
+  beyond.append(document.createElement("span"));
+  floorEl.append(beyond);
+  const slider = document.getElementById("reach");
+  slider.max = venue.depth_m;
+  const far = (p) => reach !== null && p.y > reach;
+
+  function showReach(m) {
+    reach = m;
+    slider.disabled = false;
+    if (document.activeElement !== slider) slider.value = m;
+    document.getElementById("reach-text").textContent = metresText(m);
+    beyond.hidden = m >= venue.depth_m;
+    beyond.style.top = `${(m / venue.depth_m) * 100}%`;
+    beyond.firstChild.textContent = `ignored beyond ${metresText(m)}`;
+    draw();
+  }
+  slider.addEventListener("input", () => {
+    if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ max_distance_m: Number(slider.value) }));
+  });
+
   function draw() {
     floorEl.querySelectorAll(".dot, .tag").forEach((d) => d.remove());
     const people = [...(pointer ? [[pointer, "pointer"]] : []), ...standing.map((p) => [p, ""])];
@@ -136,21 +174,23 @@
       const left = `${(p.x / venue.width_m) * 100}%`;
       const top = `${(p.y / venue.depth_m) * 100}%`;
       const d = document.createElement("div");
-      d.className = `dot ${kind}`;
+      const ignored = far(p) ? "far" : "";
+      d.className = `dot ${kind} ${ignored}`;
       d.style.left = left;
       d.style.top = top;
       const tag = document.createElement("div");
-      tag.className = `tag ${kind}`;
+      tag.className = `tag ${kind} ${ignored}`;
       tag.style.left = left;
       tag.style.top = top;
-      tag.textContent = metresText(p.y);
+      tag.textContent = metresText(p.y) + (ignored ? " · ignored" : "");
       floorEl.append(d, tag);
     }
     const list = document.getElementById("people");
     list.replaceChildren(...people.map(([p, kind], i) => {
       const li = document.createElement("li");
       const who = kind === "pointer" ? "pointer" : `standing ${i + (pointer ? 0 : 1)}`;
-      li.innerHTML = `${who}: <b>${metresText(p.y)}</b> away · x ${metresText(p.x)} · screen ${screenOf(p.x)}`;
+      li.innerHTML = `${who}: <b>${metresText(p.y)}</b> away · x ${metresText(p.x)} · `
+        + (far(p) ? "ignored, too far" : `screen ${screenOf(p.x)}`);
       return li;
     }));
     const nearest = people.length ? Math.min(...people.map(([p]) => p.y)) : null;
@@ -186,6 +226,7 @@
     ws.onopen = () => { backoff = 0.5; document.getElementById("link").textContent = ""; send(); };
     ws.onmessage = (e) => {
       const m = JSON.parse(e.data);
+      if (m.type === "settings") return showReach(m.max_distance_m);
       if (m.type !== "status") return;
       document.getElementById("mode").textContent = m.mode;
       document.getElementById("count").textContent = m.count;

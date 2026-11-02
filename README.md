@@ -55,6 +55,11 @@ article's.
 are set per site, because a real radar reads off and real people stand in odd places. `$VENUE`
 points at another file.
 
+`max_distance_m` (default 3 m) is how far from the screens someone can be and still count.
+Someone walking past along the far wall doesn't wake the character. The slider under the floor
+changes it live for that page's connection. The floor shows the cut-off as a dashed line and dims
+anyone beyond it. Copy a value you like into `venue.toml`: a restart starts from the file again.
+
 ## Not yet
 
 | Left out | Add when |

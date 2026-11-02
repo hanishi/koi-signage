@@ -10,6 +10,7 @@ V = load_venue(Path(__file__).parent.parent / "venue.toml")
 def test_loads_repo_venue() -> None:
     assert V.zone_cuts_m == (1, 2, 3, 4, 5, 6, 7, 8)
     assert V.ready_timeout_s == 1.0
+    assert V.max_distance_m == 3.0
 
 
 def test_zone_and_screen_at_cuts() -> None:
@@ -37,5 +38,13 @@ GOOD = Path(__file__).parent.parent.joinpath("venue.toml").read_text()
 def test_rejects_bad_cuts(tmp_path: Path, cuts: str) -> None:
     bad = tmp_path / "venue.toml"
     bad.write_text(GOOD.replace("[1, 2, 3, 4, 5, 6, 7, 8]", cuts))
+    with pytest.raises(ValueError):
+        load_venue(bad)
+
+
+@pytest.mark.parametrize("m", ["0", "4.5"])
+def test_rejects_max_distance_off_the_floor(tmp_path: Path, m: str) -> None:
+    bad = tmp_path / "venue.toml"
+    bad.write_text(GOOD.replace("max_distance_m = 3.0", f"max_distance_m = {m}"))
     with pytest.raises(ValueError):
         load_venue(bad)
