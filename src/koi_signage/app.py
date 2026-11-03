@@ -76,7 +76,8 @@ def guardian(make_character: Callable[[], Behavior[CharacterMsg]]) -> Behavior[G
 
 class AdRequest(BaseModel):
     clip: str  # a file in the venue's ads dir
-    seconds: float = Field(gt=0)  # the slot: the clip holds its last frame or is cut to fit
+    # the slot, 15 s as is usual for signage: the clip holds its last frame or is cut to fit
+    seconds: float = Field(default=15, gt=0)
 
 
 def create_app(venue: Venue) -> FastAPI:

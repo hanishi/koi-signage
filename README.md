@@ -143,12 +143,12 @@ whoever is there.
 
 ```
 curl -X POST localhost:8000/ads -H 'content-type: application/json' \
-     -d '{"clip": "sample.mp4", "seconds": 10}'
+     -d '{"clip": "sample.mp4", "seconds": 15}'
 ```
 
 - `clip` is a file in the venue's ads folder, served at `/ads/`. A sample ships with the package;
   `[ads] dir` in `venue.toml` points at your own folder. A clip dropped in can play at once.
-- `seconds` is the slot. The character goes back to the koi when it ends, whatever the clip
+- `seconds` is the slot, 15 s if left out, as is usual for signage. The character goes back to the koi when it ends, whatever the clip
   does: a shorter clip holds its last frame, and a longer one is cut.
 - The ad starts 1.5 s after it is asked for, the same moment on every screen: the koi fade out
   over the last second, while the tablets load the clip. A screen that loads late, or connects
@@ -156,7 +156,7 @@ curl -X POST localhost:8000/ads -H 'content-type: application/json' \
   than 0.15 s off the shared clock jumps back in step.
 - An ad that arrives during another replaces it.
 
-The floor page's "Play an ad" button sends the first clip in the folder, for 10 s. It stands in
+The floor page's "Play an ad" button sends the first clip in the folder, for 15 s. It stands in
 for Promovolve's schedule, as the pointer stands in for the radar.
 
 ## Actors

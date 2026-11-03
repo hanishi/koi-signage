@@ -11,7 +11,7 @@ from ohra import ActorRef, Behavior, Behaviors
 from ohra.testkit import ActorTestKit, TestProbe
 from starlette.testclient import WebSocketTestSession
 
-from koi_signage.app import GetCharacter, create_app, from_env, guardian
+from koi_signage.app import AdRequest, GetCharacter, create_app, from_env, guardian
 from koi_signage.character import CharacterMsg
 from koi_signage.messages import Frame
 from koi_signage.venue import DEFAULT_VENUE
@@ -186,3 +186,7 @@ def test_ad_interrupts_every_screen() -> None:
 def test_bad_ad_rejected(clip: str, seconds: float, status: int) -> None:
     with TestClient(create_app(V)) as client:
         assert client.post("/ads", json={"clip": clip, "seconds": seconds}).status_code == status
+
+
+def test_an_ad_slot_is_15_s_unless_given() -> None:
+    assert AdRequest(clip="sample.mp4").seconds == 15
