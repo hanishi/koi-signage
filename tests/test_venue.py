@@ -132,3 +132,9 @@ def test_rejects_a_creative_that_isnt_there(tmp_path: Path, name: str) -> None:
     bad.write_text(GOOD.replace('creative = "koi"', f'creative = "{name}"'))
     with pytest.raises(ValueError, match="creative"):
         load_venue(bad)
+
+
+def test_image_creative(tmp_path: Path) -> None:
+    pixi = tmp_path / "venue.toml"
+    pixi.write_text(GOOD.replace('creative = "koi"', 'creative = "koi-pixi"'))
+    assert load_venue(pixi).creative == "koi-pixi"

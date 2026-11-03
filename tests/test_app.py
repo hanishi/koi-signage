@@ -1,5 +1,6 @@
 """The app over its WebSockets, and the guardian's respawn."""
 
+import tomllib
 from pathlib import Path
 from typing import Any
 
@@ -146,3 +147,21 @@ def test_screen_count_from_the_venue() -> None:
             assert ws.receive_json()["type"] == "pong"
         with pytest.raises(WebSocketDisconnect), client.websocket_connect("/ws/screen/4"):
             pass
+
+
+def test_every_static_file_is_package_data() -> None:
+    """A pip install has every page, creative, image and library the source tree has."""
+    pkg = Path(__file__).parents[1] / "src" / "koi_signage"
+    pyproject = tomllib.loads((pkg.parents[1] / "pyproject.toml").read_text())
+    globs = pyproject["tool"]["setuptools"]["package-data"]["koi_signage"]
+    shipped = {p for g in globs for p in pkg.glob(g) if p.is_file()}
+    assert {p for p in (pkg / "static").rglob("*") if p.is_file()} - shipped == set()
+
+
+def test_image_creative_served() -> None:
+    with TestClient(create_app(V)) as client:
+        png = client.get("/static/creatives/koi-pixi/0.png")
+        assert png.headers["content-type"] == "image/png"
+        # a module script must come as JavaScript, or the browser refuses to run it
+        pixi = client.get("/static/vendor/pixi-8.22.0.min.mjs")
+        assert pixi.headers["content-type"].startswith("text/javascript")

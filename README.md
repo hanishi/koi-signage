@@ -64,13 +64,20 @@ second. There are no image files.
 - **No blur filters:** each canvas blur renders a full-screen layer, too slow for five koi on a
   tablet. Soft edges come from layered translucent strokes.
 
-Change the colours, `halfWidth`, `VARIETIES` or `FORMATION` at the top of `koi.js` for a
-different school.
+How the school swims (spines, formation, depth, handoffs) is in
+[`school.js`](src/koi_signage/static/school.js), and how it looks is in `koi.js`. Change the
+colours, `halfWidth` or `VARIETIES` at the top of `koi.js` for different koi, and `FORMATION` in
+`school.js` for a different school.
 
 ## Making a creative
 
-The school is one creative. `[screen] creative` in `venue.toml` picks which one every screen
-shows: `creative = "koi"` loads `src/koi_signage/static/creatives/koi.js`. To make another, add
+`[screen] creative` in `venue.toml` picks what every screen shows: `creative = "koi"` loads
+`src/koi_signage/static/creatives/koi.js`. Two ship with the package:
+
+- `koi` draws the school with the canvas API.
+- `koi-pixi` swims the same school from PNG images, with [PixiJS](https://pixijs.com) (see
+  [Image creatives](#image-creatives)).
+ To make another, add
 `creatives/<name>.js`, set `creative = "<name>"` and reload the pages. Static files are read on
 every request, so there is no build step and no restart.
 
@@ -103,6 +110,29 @@ export function create(canvas) {
 
 A `"character"` call can follow a `"character"` or `"blank"` call at any time, and either can
 arrive without a `prepare()` first, so a creative never assumes an order.
+
+A creative that wants the school can import `school()` from `../school.js`: give it the screen's
+size, call `step(t, dt)` every frame, and draw each koi along `spine(k)`. Both shipped creatives
+do this, which is how their koi cross between screens in step.
+
+A library a creative uses goes in `static/vendor/`, with its version in the file name and its
+licence beside it. Never load one from a CDN: a venue may have no internet.
+
+### Image creatives
+
+`koi-pixi` bends each koi's PNG along its spine with a PixiJS `MeshRope`, so art made in any
+drawing program swims like the drawn koi, without a proprietary format or tool. To use your own
+art, replace `creatives/koi-pixi/0.png` to `4.png`, one per koi (0 leads), each drawn straight
+from above, nose to the left:
+
+- **Length:** 512 px from the nose to the base of the tail. The rope scales it to the screen.
+- **Width:** 723 px, 24 equal segments of 30.1 px: 1 segment of margin before the nose, the body
+  over the next 17, and the tail fin over the last 6.
+- **Height:** any, with the spine on the horizontal centre line. Leave the rest transparent.
+- **Pose:** straight, with the tail straight behind. The rope bends the body and swings the
+  tail; the fins stay as drawn. Leave out the shadow: the creative casts one.
+
+The PNGs that ship are `koi.js`'s own koi, drawn this way, as stand-ins for real art.
 
 ## Actors
 
@@ -161,7 +191,7 @@ nearest it sees them.
 | Follow cap (the creepiness mitigation) | after a first walk-through |
 | Walking-speed lead on the handoff time | latency is measured on tablets |
 | Loop-lag metric | it runs on the Pi |
-| Real creatives: the character is a drawn koi (`static/creatives/koi.js`) | Promovolve supplies assets |
+| Real creatives: the koi are drawn, or `koi.js`'s koi as PNGs (`static/creatives/`) | Promovolve supplies assets |
 
 ## Contributing
 

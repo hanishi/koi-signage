@@ -54,7 +54,9 @@ reload shows a change. Python changes and `venue.toml` need a restart.
   there, so swapping in the UART actor changes nothing downstream.
 - **The realtime path makes no network or LLM calls.** Frames to commands stays on the venue
   machine.
-- **The core depends on `ohra` only.** The pages use no build step and no JavaScript libraries.
+- **The core depends on `ohra` only.** The pages have no build step. A creative may use a
+  JavaScript library, vendored in `static/vendor/` with its version in the file name and its
+  licence beside it, never loaded from a CDN: a venue may be offline.
 
 ## Style
 
