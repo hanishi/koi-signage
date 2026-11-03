@@ -62,6 +62,7 @@ def test_venue_for_the_page() -> None:
             "zone_cuts_m": [1, 2, 3, 4, 5, 6, 7, 8],
             "radar": {"x_m": 4.5, "range_m": 6.0, "fov_deg": 120.0},
             "creative": "koi",
+            "ads": ["sample.mp4"],
         }
 
 
@@ -165,3 +166,23 @@ def test_image_creative_served() -> None:
         # a module script must come as JavaScript, or the browser refuses to run it
         pixi = client.get("/static/vendor/pixi-8.22.0.min.mjs")
         assert pixi.headers["content-type"].startswith("text/javascript")
+
+
+def test_ad_interrupts_every_screen() -> None:
+    with TestClient(create_app(V)) as client:
+        assert client.get("/ads/sample.mp4").headers["content-type"] == "video/mp4"
+        with client.websocket_connect("/ws/screen/0") as s0:
+            synced(s0)
+            until(s0, "idle")
+            reply = client.post("/ads", json={"clip": "sample.mp4", "seconds": 10})
+            assert reply.status_code == 202
+            assert until(s0, "ad")["clip"] == "sample.mp4"
+
+
+@pytest.mark.parametrize(
+    ("clip", "seconds", "status"),
+    [("missing.mp4", 10, 404), ("../venue.toml", 10, 404), ("sample.mp4", 0, 422)],
+)
+def test_bad_ad_rejected(clip: str, seconds: float, status: int) -> None:
+    with TestClient(create_app(V)) as client:
+        assert client.post("/ads", json={"clip": clip, "seconds": seconds}).status_code == status

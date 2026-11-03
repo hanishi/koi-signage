@@ -1,7 +1,8 @@
 """The character: the only actor in the venue that decides anything.
 
 It idles when nobody is there, follows one person from screen to screen, and moves toward the
-busiest screen when there are several. Every threshold runs on ohra timers."""
+busiest screen when there are several. An ad interrupts all of that: every screen plays it, and
+when its slot is over they show the character again. Every threshold runs on ohra timers."""
 
 import time
 from collections.abc import Callable, Mapping
@@ -11,6 +12,7 @@ from typing import Literal
 from ohra import ActorContext, ActorRef, Behavior, Behaviors, TimerScheduler
 
 from koi_signage.messages import (
+    Ad,
     AttachFloor,
     AttachScreen,
     Cancel,
@@ -19,6 +21,7 @@ from koi_signage.messages import (
     Frame,
     Idle,
     Mode,
+    PlayAd,
     Prepare,
     Ready,
     ScreenCmd,
@@ -26,6 +29,11 @@ from koi_signage.messages import (
     Status,
 )
 from koi_signage.venue import Venue, boundaries, screen_counts
+
+# An ad starts this long after it is asked for, on every screen at once: time for the tablets to
+# load the clip while the creative fades out (1 s, in screen.js). Under the 2 s a screen accepts
+# as ahead of its clock; a tablet that is slower to load starts the clip part way, in step.
+AD_LEAD_S = 1.5
 
 
 @dataclass(frozen=True)
@@ -59,6 +67,11 @@ class _LeadDone:
     screen: int
 
 
+@dataclass(frozen=True)
+class _AdDone:
+    t: float  # the ad's start: a replaced ad's timer is stale
+
+
 type CharacterMsg = (
     Frame
     | Sensed
@@ -71,6 +84,8 @@ type CharacterMsg = (
     | _ReadyTimeout
     | _LingerDone
     | _LeadDone
+    | Ad
+    | _AdDone
 )
 
 _MODE: Mapping[int, Mode] = {0: "idle", 1: "follow", 2: "crowd"}
@@ -94,6 +109,7 @@ class _State:
     moving: int | None = None  # a handoff waiting for Ready or the timeout
     lead: int | None = None  # the screen leading the crowd, other than the character's
     lead_due: bool = False  # it has led for crowd_lead_s
+    ad: PlayAd | None = None  # the ad every screen is playing: the people are not shown
 
 
 def follow_step(
@@ -125,6 +141,8 @@ def character(venue: Venue, clock: Callable[[], float] = time.monotonic) -> Beha
                 ref.tell(cmd)
 
         def current(s: _State, n: int) -> ScreenCmd:
+            if s.ad is not None:
+                return s.ad
             if s.mode == "idle":
                 return Idle()
             return Enter(clock()) if n == s.screen else Exit(clock())
@@ -187,6 +205,7 @@ def character(venue: Venue, clock: Callable[[], float] = time.monotonic) -> Beha
                 or s.lead is None
                 or not s.lead_due
                 or s.moving is not None
+                or s.ad is not None
                 or timers.is_timer_active("linger")
             ):
                 return s
@@ -198,7 +217,7 @@ def character(venue: Venue, clock: Callable[[], float] = time.monotonic) -> Beha
             was = s.mode
             timers.cancel("lead")
             s = replace(unprepare(s), mode=mode, settling=None, lead=None, lead_due=False)
-            if mode == "idle" or was == "idle":
+            if s.ad is None and (mode == "idle" or was == "idle"):
                 for n in s.screens:
                     tell(s, n, current(s, n))
             return s
@@ -215,7 +234,7 @@ def character(venue: Venue, clock: Callable[[], float] = time.monotonic) -> Beha
 
         def on_frame(s: _State, frame: Frame) -> _State:
             s = settle(replace(s, count=len(frame.targets)))
-            if s.moving is not None:
+            if s.moving is not None or s.ad is not None:
                 return s
             if s.mode == "follow" and s.count == 1:
                 return follow(s, frame.targets[0].x)
@@ -224,7 +243,7 @@ def character(venue: Venue, clock: Callable[[], float] = time.monotonic) -> Beha
             return s
 
         def publish(s: _State) -> _State:
-            status = Status(s.mode, s.count, s.screen)
+            status = Status("ad" if s.ad else s.mode, s.count, s.screen)
             if status == s.shown:
                 return s
             for floor in s.floors:
@@ -250,7 +269,7 @@ def character(venue: Venue, clock: Callable[[], float] = time.monotonic) -> Beha
                     return replace(s, screens={**rest, n: pages} if pages else rest)
                 case AttachFloor(ref):
                     ctx.watch_with(ref, _FloorGone(ref))
-                    status = Status(s.mode, s.count, s.screen)
+                    status = Status("ad" if s.ad else s.mode, s.count, s.screen)
                     ref.tell(status)
                     floors = tuple(f for f in s.floors if f != ref) + (ref,)
                     return replace(s, floors=floors, shown=status)
@@ -270,6 +289,21 @@ def character(venue: Venue, clock: Callable[[], float] = time.monotonic) -> Beha
                     return try_move(s)
                 case _LeadDone(n):
                     return try_move(replace(s, lead_due=True)) if n == s.lead else s
+                case Ad(clip, seconds):
+                    timers.cancel("lead")
+                    ad = PlayAd(clip, clock() + AD_LEAD_S)
+                    s = replace(unprepare(s), ad=ad, lead=None, lead_due=False)
+                    for n in s.screens:
+                        tell(s, n, ad)
+                    timers.start_single_timer("ad", _AdDone(ad.t), AD_LEAD_S + seconds)
+                    return s
+                case _AdDone(t):
+                    if s.ad is None or s.ad.t != t:
+                        return s
+                    s = replace(s, ad=None)
+                    for n in s.screens:  # the koi come back where the people are
+                        tell(s, n, current(s, n))
+                    return s
 
         def run(s: _State) -> Behavior[CharacterMsg]:
             def on_message(

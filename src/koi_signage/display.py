@@ -13,7 +13,17 @@ from ohra import ActorContext, ActorRef, Behavior, Behaviors
 
 from koi_signage.character import CharacterMsg
 from koi_signage.floor import finite_number
-from koi_signage.messages import AttachScreen, Cancel, Enter, Exit, Idle, Prepare, Ready, ScreenCmd
+from koi_signage.messages import (
+    AttachScreen,
+    Cancel,
+    Enter,
+    Exit,
+    Idle,
+    PlayAd,
+    Prepare,
+    Ready,
+    ScreenCmd,
+)
 
 
 @dataclass(frozen=True)
@@ -62,6 +72,8 @@ def _json(cmd: ScreenCmd) -> dict[str, Any]:
             return {"type": "enter", "t": t, "side": side}
         case Exit(t, side):
             return {"type": "exit", "t": t, "side": side}
+        case PlayAd(clip, t):
+            return {"type": "ad", "clip": clip, "t": t}
 
 
 def display(

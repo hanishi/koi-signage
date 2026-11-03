@@ -6,7 +6,7 @@ from ohra.testkit import ActorTestKit, TestProbe
 
 from koi_signage.character import CharacterMsg
 from koi_signage.display import DisplayMsg, PageReady, Ping, decode_screen, display
-from koi_signage.messages import AttachScreen, Cancel, Enter, Exit, Idle, Prepare, Ready
+from koi_signage.messages import AttachScreen, Cancel, Enter, Exit, Idle, PlayAd, Prepare, Ready
 
 
 async def spawned(
@@ -43,14 +43,16 @@ async def test_commands_to_json() -> None:
         _, out, ref = await spawned(testkit)
         ref.tell(Ping(0.0))
         await out.receive_message()
-        for cmd in (Idle(), Prepare(), Cancel(), Enter(2.5, "left"), Exit(3.0)):
+        cmds = (Idle(), Prepare(), Cancel(), Enter(2.5, "left"), Exit(3.0), PlayAd("a.mp4", 4.0))
+        for cmd in cmds:
             ref.tell(cmd)
-        assert await out.receive_messages(5) == [
+        assert await out.receive_messages(6) == [
             {"type": "idle"},
             {"type": "prepare"},
             {"type": "cancel"},
             {"type": "enter", "t": 2.5, "side": "left"},
             {"type": "exit", "t": 3.0, "side": None},
+            {"type": "ad", "clip": "a.mp4", "t": 4.0},
         ]
 
 

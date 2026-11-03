@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from koi_signage.venue import (
+    ADS,
     DEFAULT_VENUE,
     Target,
     boundaries,
@@ -138,3 +139,18 @@ def test_image_creative(tmp_path: Path) -> None:
     pixi = tmp_path / "venue.toml"
     pixi.write_text(GOOD.replace('creative = "koi"', 'creative = "koi-pixi"'))
     assert load_venue(pixi).creative == "koi-pixi"
+
+
+def test_ads_come_from_the_package_unless_a_dir_is_set(tmp_path: Path) -> None:
+    assert V.ads_dir == ADS
+    (tmp_path / "clips").mkdir()
+    mine = tmp_path / "venue.toml"
+    mine.write_text(GOOD.replace('# dir = "ads"', 'dir = "clips"'))  # relative to venue.toml
+    assert load_venue(mine).ads_dir == tmp_path / "clips"
+
+
+def test_rejects_an_ads_dir_that_isnt_there(tmp_path: Path) -> None:
+    bad = tmp_path / "venue.toml"
+    bad.write_text(GOOD.replace('# dir = "ads"', 'dir = "nowhere"'))
+    with pytest.raises(ValueError, match="is not a directory"):
+        load_venue(bad)

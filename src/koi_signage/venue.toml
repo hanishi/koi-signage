@@ -16,6 +16,9 @@ creative = "koi"        # what the screens show: static/creatives/<name>.js
 range_m = 6.0           # it sees this far, measured from the sensor
 fov_deg = 120.0         # and this wide: ±60° either side of straight out
 
+[ads]
+# dir = "ads"           # your clips, relative to this file; the sample that ships if unset
+
 [character]
 follow_after_s = 1.0    # 1 person this long → Follow
 crowd_after_s = 1.0     # 2+ this long → Crowd

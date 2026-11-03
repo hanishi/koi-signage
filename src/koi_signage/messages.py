@@ -9,6 +9,7 @@ from ohra import ActorRef
 from koi_signage.venue import Target
 
 __all__ = [
+    "Ad",
     "AttachFloor",
     "AttachScreen",
     "Cancel",
@@ -17,6 +18,7 @@ __all__ = [
     "Frame",
     "Idle",
     "Mode",
+    "PlayAd",
     "Prepare",
     "Ready",
     "ScreenCmd",
@@ -26,7 +28,7 @@ __all__ = [
     "Target",
 ]
 
-type Mode = Literal["idle", "follow", "crowd"]
+type Mode = Literal["idle", "follow", "crowd"]  # what the people on the floor ask for
 type Side = Literal["left", "right"]
 
 
@@ -72,7 +74,16 @@ class Exit:
     side: Side | None = None
 
 
-type ScreenCmd = Idle | Prepare | Cancel | Enter | Exit
+@dataclass(frozen=True)
+class PlayAd:
+    """Play ``clip`` from ``t``, muted, in place of the creative, which fades out before it. A
+    screen that gets this after ``t`` starts the clip part way, where the other screens are."""
+
+    clip: str
+    t: float
+
+
+type ScreenCmd = Idle | Prepare | Cancel | Enter | Exit | PlayAd
 
 
 # --- to Character ------------------------------------------------------------------------------
@@ -92,8 +103,16 @@ class Ready:
 
 
 @dataclass(frozen=True)
+class Ad:
+    """Interrupt: every screen plays ``clip`` for ``seconds``, then shows the character again."""
+
+    clip: str
+    seconds: float
+
+
+@dataclass(frozen=True)
 class Status:
-    mode: Mode
+    mode: Mode | Literal["ad"]
     count: int
     screen: int
 

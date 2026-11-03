@@ -10,6 +10,11 @@ const now = () => performance.now() / 1000;
 // time would freeze the offset, and a tablet's crystal drifts 10-50 ppm against the Pi.
 export const SAMPLE_WINDOW = 6;
 
+// The creative fades out this long before an ad starts. Under AD_LEAD_S in character.py, which
+// is how far ahead an ad is sent.
+const AD_FADE_S = 1;
+const DRIFT_S = 0.15; // further than this from the venue clock, a clip jumps back in step
+
 // The venue clock minus the page clock, from the fastest of the last SAMPLE_WINDOW pings. A
 // sample is {c: sent, r: received} on the page clock and {s} on the venue clock.
 export function offsetFrom(samples) {
@@ -27,7 +32,21 @@ export function connectScreen(n, el, create) {
   let pending = [];
 
   const creative = create(el.querySelector("canvas"));
-  const show = (state, side = null) => { el.dataset.state = state; creative.show(state, side); };
+  const video = el.querySelector("video");
+  const show = (state, side = null) => {
+    delete el.dataset.video; // any command but an ad ends one: the video fades out
+    el.dataset.state = state; // and the creative fades back in
+    creative.show(state, side);
+  };
+  video.addEventListener("transitionend", () => { if (!("video" in el.dataset)) video.pause(); });
+  // Keep the clip on the venue clock: a seek takes time, and a tablet's decoder drifts. A few
+  // times a second, a screen more than DRIFT_S off where the clip should be jumps there.
+  let adStart = null;
+  video.addEventListener("timeupdate", () => {
+    const due = now() + offset - adStart;
+    if (adStart === null || video.paused || due > video.duration) return;
+    if (Math.abs(video.currentTime - due) > DRIFT_S) video.currentTime = due;
+  });
   const send = (frame) => { if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(frame)); };
   const ping = () => send({ type: "ping", c: now() });
   // every t is now or now + handoff_lead_s on the venue clock: anything further means the
@@ -37,6 +56,30 @@ export function connectScreen(n, el, create) {
     const ms = (t - offset - now()) * 1000;
     pending.push(setTimeout(fn, ms > MAX_AHEAD_MS ? 0 : Math.max(0, ms)));
   };
+
+  // An ad: load the clip now, fade the creative out over the second before t, start the clip at
+  // t. Late (a slow load, or a screen that connected mid-ad), it starts where the others are.
+  function playAd(clip, t) {
+    pending.forEach(clearTimeout);
+    pending = [];
+    const src = new URL(`/ads/${encodeURIComponent(clip)}`, location.href).href;
+    if (video.src !== src) video.src = src;
+    at(t - AD_FADE_S, () => {
+      el.dataset.state = "ad";
+      creative.show("blank");
+    });
+    at(t, () => {
+      adStart = t;
+      const start = () => {
+        const late = now() + offset - t;
+        video.currentTime = late > 0.25 ? late : 0;
+        video.play().catch(() => {}); // muted, so autoplay is allowed
+        el.dataset.video = "";
+      };
+      if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) start();
+      else video.addEventListener("loadeddata", start, { once: true });
+    });
+  }
 
   function open() {
     const proto = location.protocol === "https:" ? "wss" : "ws";
@@ -71,6 +114,9 @@ export function connectScreen(n, el, create) {
         case "exit":
           at(m.t, () => show("blank", m.side));
           break;
+        case "ad":
+          playAd(m.clip, m.t);
+          break;
       }
     };
     ws.onclose = () => {
@@ -85,13 +131,19 @@ export function connectScreen(n, el, create) {
 
 export const SCREEN_CSS = `
 .screen { position: relative; overflow: hidden; background: #061516; }
-.screen canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.screen canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+  transition: opacity 1s; }
+.screen[data-state="ad"] canvas { opacity: 0; }
+.screen video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
+  background: #000; opacity: 0; transition: opacity 0.5s; pointer-events: none; }
+.screen[data-video] video { opacity: 1; }
 `;
 
 export function screenElement() {
   const el = document.createElement("div");
   el.className = "screen";
   el.dataset.state = "blank";
-  el.append(document.createElement("canvas"));
+  const video = Object.assign(document.createElement("video"), { muted: true, playsInline: true, preload: "auto" });
+  el.append(document.createElement("canvas"), video);
   return el;
 }
