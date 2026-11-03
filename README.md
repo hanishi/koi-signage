@@ -152,8 +152,9 @@ curl -X POST localhost:8000/ads -H 'content-type: application/json' \
   does: a shorter clip holds its last frame, and a longer one is cut.
 - The ad starts 1.5 s after it is asked for, the same moment on every screen: the koi fade out
   over the last second, while the tablets load the clip. A screen that loads late, or connects
-  during the ad, starts the clip part way, where the others are, and a screen that drifts more
-  than 0.15 s off the shared clock jumps back in step.
+  during the ad, starts the clip part way, where the others are. A screen that drifts off the
+  shared clock plays up to 5% faster or slower until it is back within 0.02 s, which nobody
+  sees; only one more than 0.25 s off (a late join, a stall) jumps.
 - An ad that arrives during another replaces it.
 
 The floor page's "Play an ad" button sends the first clip in the folder, for 15 s. It stands in

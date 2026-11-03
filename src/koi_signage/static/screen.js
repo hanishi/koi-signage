@@ -13,7 +13,20 @@ export const SAMPLE_WINDOW = 6;
 // The creative fades out this long before an ad starts. Under AD_LEAD_S in character.py, which
 // is how far ahead an ad is sent.
 const AD_FADE_S = 1;
-const DRIFT_S = 0.15; // further than this from the venue clock, a clip jumps back in step
+
+// The playback speed that brings an ad back in step, from its drift: where the clip is minus
+// where it should be on the venue clock, in seconds. Within IN_STEP_S, normal speed. A bit
+// behind or ahead, a little faster or slower, closing the gap over about a second but never
+// more than MAX_NUDGE off normal, which nobody sees. Beyond JUMP_S (a late join, a stall),
+// null: jump there, as easing would take too long.
+const IN_STEP_S = 0.02;
+const MAX_NUDGE = 0.05;
+const JUMP_S = 0.25;
+export function adRate(drift) {
+  if (Math.abs(drift) > JUMP_S) return null;
+  if (Math.abs(drift) <= IN_STEP_S) return 1;
+  return 1 - Math.max(-MAX_NUDGE, Math.min(MAX_NUDGE, drift));
+}
 
 // The venue clock minus the page clock, from the fastest of the last SAMPLE_WINDOW pings. A
 // sample is {c: sent, r: received} on the page clock and {s} on the venue clock.
@@ -40,12 +53,14 @@ export function connectScreen(n, el, create) {
   };
   video.addEventListener("transitionend", () => { if (!("video" in el.dataset)) video.pause(); });
   // Keep the clip on the venue clock: a seek takes time, and a tablet's decoder drifts. A few
-  // times a second, a screen more than DRIFT_S off where the clip should be jumps there.
+  // times a second each screen eases its speed back in step, or jumps when far off (adRate).
   let adStart = null;
   video.addEventListener("timeupdate", () => {
     const due = now() + offset - adStart;
     if (adStart === null || video.paused || due > video.duration) return;
-    if (Math.abs(video.currentTime - due) > DRIFT_S) video.currentTime = due;
+    const rate = adRate(video.currentTime - due);
+    if (rate === null) video.currentTime = due;
+    else video.playbackRate = rate;
   });
   const send = (frame) => { if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(frame)); };
   const ping = () => send({ type: "ping", c: now() });
@@ -70,6 +85,7 @@ export function connectScreen(n, el, create) {
     });
     at(t, () => {
       adStart = t;
+      video.playbackRate = 1;
       const start = () => {
         const late = now() + offset - t;
         video.currentTime = late > 0.25 ? late : 0;
