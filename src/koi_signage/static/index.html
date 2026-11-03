@@ -112,6 +112,18 @@
       w?.focus();
     });
   }
+  // Stands in for Promovolve's schedule, as the pointer stands in for the radar: every screen
+  // plays the clip for a 15 s slot, then the koi come back.
+  if (venue.ads.length) {
+    const ad = Object.assign(document.createElement("button"), { type: "button", textContent: "Play an ad" });
+    ad.title = `${venue.ads[0]} on every screen for 15 s`;
+    layoutLink.before(ad);
+    ad.addEventListener("click", () => fetch("/ads", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ clip: venue.ads[0] }),
+    }));
+  }
 
   const floorEl = document.getElementById("floor");
   floorEl.style.aspectRatio = `${venue.width_m} / ${venue.depth_m}`;

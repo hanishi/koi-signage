@@ -10,16 +10,18 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, HTTPException, WebSocket
 from fastapi import Path as Param
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from ohra import ActorContext, ActorRef, ActorSystem, Behavior, Behaviors
 from ohra.ext.fastapi import Actors
+from pydantic import BaseModel, Field
 
 from koi_signage.character import CharacterMsg, character
 from koi_signage.display import decode_screen, display
 from koi_signage.floor import decode_floor, floor
+from koi_signage.messages import Ad
 from koi_signage.venue import DEFAULT_VENUE, Venue, load_venue
 
 STATIC = Path(__file__).parent / "static"
@@ -72,12 +74,23 @@ def guardian(make_character: Callable[[], Behavior[CharacterMsg]]) -> Behavior[G
     return Behaviors.setup(setup)
 
 
+class AdRequest(BaseModel):
+    clip: str  # a file in the venue's ads dir
+    # the slot, 15 s as is usual for signage: the clip holds its last frame or is cut to fit
+    seconds: float = Field(default=15, gt=0)
+
+
 def create_app(venue: Venue) -> FastAPI:
     actors = Actors(guardian(lambda: character(venue)), "koi-signage")
     app = FastAPI(
         title="koi-signage", lifespan=actors.lifespan, exception_handlers=actors.exception_handlers
     )
     app.mount("/static", StaticFiles(directory=STATIC), name="static")  # read per request
+    app.mount("/ads", StaticFiles(directory=venue.ads_dir), name="ads")
+
+    def clips() -> list[str]:  # read per request: drop a clip in and it can play
+        files = venue.ads_dir.iterdir()
+        return sorted(f.name for f in files if f.is_file() and not f.name.startswith("."))
 
     async def the_character(system: ActorSystem[GuardianMsg]) -> ActorRef[CharacterMsg]:
         return await system.ask(GetCharacter, timeout=2)
@@ -104,7 +117,19 @@ def create_app(venue: Venue) -> FastAPI:
                 "fov_deg": venue.radar_fov_deg,
             },
             "creative": venue.creative,
+            "ads": clips(),
         }
+
+    @app.post("/ads", status_code=202)
+    async def play_ad(
+        ad: AdRequest, system: ActorSystem[GuardianMsg] = actors.depends()
+    ) -> dict[str, str]:
+        """Interrupt the character: every screen plays ``clip`` for ``seconds``, then the
+        character comes back. Promovolve's schedule will call this; the floor page does now."""
+        if ad.clip not in clips():
+            raise HTTPException(404, f"no clip {ad.clip!r} in {venue.ads_dir}")
+        (await the_character(system)).tell(Ad(ad.clip, ad.seconds))
+        return {"playing": ad.clip}
 
     @app.websocket("/ws/floor")
     async def floor_socket(

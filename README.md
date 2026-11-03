@@ -134,13 +134,38 @@ from above, nose to the left:
 
 The PNGs that ship are `koi.js`'s own koi, drawn this way, as stand-ins for real art.
 
+## Ads
+
+The koi are the venue's house content, like a screen saver: what the screens show when no ad is
+playing. An ad interrupts them on every screen at once. The koi fade out, every screen plays the
+same clip, muted and in step, and when the ad's slot is over the koi come back, following
+whoever is there.
+
+```
+curl -X POST localhost:8000/ads -H 'content-type: application/json' \
+     -d '{"clip": "sample.mp4", "seconds": 15}'
+```
+
+- `clip` is a file in the venue's ads folder, served at `/ads/`. A sample ships with the package;
+  `[ads] dir` in `venue.toml` points at your own folder. A clip dropped in can play at once.
+- `seconds` is the slot, 15 s if left out, as is usual for signage. The character goes back to the koi when it ends, whatever the clip
+  does: a shorter clip holds its last frame, and a longer one is cut.
+- The ad starts 1.5 s after it is asked for, the same moment on every screen: the koi fade out
+  over the last second, while the tablets load the clip. A screen that loads late, or connects
+  during the ad, starts the clip part way, where the others are, and a screen that drifts more
+  than 0.15 s off the shared clock jumps back in step.
+- An ad that arrives during another replaces it.
+
+The floor page's "Play an ad" button sends the first clip in the folder, for 15 s. It stands in
+for Promovolve's schedule, as the pointer stands in for the radar.
+
 ## Actors
 
 | Actor | Does |
 |---|---|
 | guardian | spawns Character, and a fresh one if it stops |
 | Floor (one per floor page) | the pointer as the radar: a `Frame` every 100 ms, at most 3 people |
-| Character | idle / follow / crowd, and which screen shows the character. The only one that decides |
+| Character | idle / follow / crowd, which screen shows the character, and ads. The only one that decides |
 | Display (one per screen socket) | commands to its tablet, the tablet's ready back, and clock pings |
 
 The LD2450 actor will replace Floor and send the same `Frame`. The
@@ -185,7 +210,8 @@ nearest it sees them.
 
 | Left out | Add when |
 |---|---|
-| Uplink, Outbox, CreativeCache (Promovolve) | the HTTPS contract with Promovolve is agreed |
+| Uplink, Outbox, CreativeCache (Promovolve), and its schedule calling `POST /ads` | the HTTPS contract with Promovolve is agreed |
+| Ad clips stored on the tablets, for a dropped network | Promovolve supplies assets |
 | Operator agent (ohra-agents) | this runs and the agent is still wanted |
 | LD2450 UART sensor | the radar arrives |
 | Follow cap (the creepiness mitigation) | after a first walk-through |

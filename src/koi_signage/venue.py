@@ -14,6 +14,7 @@ from pathlib import Path
 ZONES_PER_SCREEN = 3
 DEFAULT_VENUE = Path(__file__).with_name("venue.toml")  # the defaults the package ships
 CREATIVES = Path(__file__).parent / "static" / "creatives"  # one <name>.js per creative
+ADS = Path(__file__).parent / "static" / "ads"  # the sample clip, unless [ads] dir says otherwise
 
 
 @dataclass(frozen=True)
@@ -43,6 +44,7 @@ class Venue:
     handoff_lead_s: float
     ready_timeout_s: float
     creative: str
+    ads_dir: Path
 
 
 def load_venue(path: Path) -> Venue:
@@ -72,6 +74,10 @@ def load_venue(path: Path) -> Venue:
     creative = doc.get("screen", {}).get("creative", "koi")
     if not (re.fullmatch(r"[a-z0-9_-]+", creative) and (CREATIVES / f"{creative}.js").is_file()):
         raise ValueError(f"no creative {creative!r}: it names a file in {CREATIVES}, minus .js")
+    named = doc.get("ads", {}).get("dir")
+    ads_dir = path.parent / named if named else ADS  # relative to the venue.toml
+    if not ads_dir.is_dir():
+        raise ValueError(f"[ads] dir {ads_dir} is not a directory")
     return Venue(
         screens=screens,
         width_m=width,
@@ -90,6 +96,7 @@ def load_venue(path: Path) -> Venue:
         handoff_lead_s=float(ch["handoff_lead_s"]),
         ready_timeout_s=float(ch["ready_timeout_s"]),
         creative=creative,
+        ads_dir=ads_dir,
     )
 
 
