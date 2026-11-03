@@ -10,9 +10,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import FastAPI, HTTPException, WebSocket
+from fastapi import FastAPI, WebSocket
 from fastapi import Path as Param
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from ohra import ActorContext, ActorRef, ActorSystem, Behavior, Behaviors
 from ohra.ext.fastapi import Actors
 
@@ -76,26 +77,18 @@ def create_app(venue: Venue) -> FastAPI:
     app = FastAPI(
         title="koi-signage", lifespan=actors.lifespan, exception_handlers=actors.exception_handlers
     )
-    index = (STATIC / "index.html").read_text()
-    screen_page = (STATIC / "screen.html").read_text()
-    scripts = {name: (STATIC / name).read_text() for name in ("screen.js", "koi.js")}
+    app.mount("/static", StaticFiles(directory=STATIC), name="static")  # read per request
 
     async def the_character(system: ActorSystem[GuardianMsg]) -> ActorRef[CharacterMsg]:
         return await system.ask(GetCharacter, timeout=2)
 
     @app.get("/")
-    async def home() -> HTMLResponse:
-        return HTMLResponse(index)
+    async def home() -> FileResponse:
+        return FileResponse(STATIC / "index.html")
 
     @app.get("/screen")
-    async def screen() -> HTMLResponse:
-        return HTMLResponse(screen_page)
-
-    @app.get("/static/{name}")
-    async def script(name: str) -> Response:
-        if name not in scripts:
-            raise HTTPException(404)
-        return Response(scripts[name], media_type="text/javascript")
+    async def screen() -> FileResponse:
+        return FileResponse(STATIC / "screen.html")
 
     @app.get("/venue")
     async def floor_plan() -> dict[str, Any]:
@@ -110,6 +103,7 @@ def create_app(venue: Venue) -> FastAPI:
                 "range_m": venue.radar_range_m,
                 "fov_deg": venue.radar_fov_deg,
             },
+            "creative": venue.creative,
         }
 
     @app.websocket("/ws/floor")

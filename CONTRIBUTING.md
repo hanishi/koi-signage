@@ -19,13 +19,13 @@ uv run ruff format   # PEP 8 layout, lines up to 99 characters
 uv run ruff check
 uv run pyright       # strict mode, 0 errors
 uv run pytest        # every test fails if any asyncio task outlives it (tests/conftest.py)
-node --test tests/js/*.test.mjs  # the screens' clock-offset estimate
+node --test tests/js/*.test.mjs  # the screens' clock offset, and each creative's export
 ```
 
 `ruff format` leaves comments, docstrings and strings alone, so wrap those yourself.
 
-The server reads its static files (`src/koi_signage/static/`) once at startup. After changing a
-page or `koi.js`, restart it to see the change.
+The server reads the pages and creatives (`src/koi_signage/static/`) on every request, so a
+reload shows a change. Python changes and `venue.toml` need a restart.
 
 ## Writing tests
 

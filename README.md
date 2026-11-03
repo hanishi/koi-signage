@@ -47,7 +47,7 @@ screen number: they mirror each other.
 ## The koi
 
 A school of five, each a different variety: Taisho Sanke (leading), Kohaku, Showa, Yamabuki Ogon
-and Asagi. `src/koi_signage/static/koi.js` draws them on a canvas, from above, about 60 times a
+and Asagi. [`creatives/koi.js`](src/koi_signage/static/creatives/koi.js) draws them on a canvas, from above, about 60 times a
 second. There are no image files.
 - **Spine:** each koi is a chain of 18 points. The head steers toward a target and each point
   follows the one ahead, so the body bends as it turns. A wave runs down the chain as it swims.
@@ -66,6 +66,43 @@ second. There are no image files.
 
 Change the colours, `halfWidth`, `VARIETIES` or `FORMATION` at the top of `koi.js` for a
 different school.
+
+## Making a creative
+
+The school is one creative. `[screen] creative` in `venue.toml` picks which one every screen
+shows: `creative = "koi"` loads `src/koi_signage/static/creatives/koi.js`. To make another, add
+`creatives/<name>.js`, set `creative = "<name>"` and reload the pages. Static files are read on
+every request, so there is no build step and no restart.
+
+A creative is an ES module that exports one function:
+
+```js
+export function create(canvas) {
+  // draw on canvas, every frame, until the page closes
+  return {
+    show(state, side) { /* ... */ },
+    prepare() { /* ... */ },
+  };
+}
+```
+
+- `create(canvas)` is called once per screen. The canvas fills the screen. Size its backing
+  store from `canvas.clientWidth` and `canvas.clientHeight` and keep it in step with them, since
+  the same file runs in a small mirror on the floor page and full screen on a tablet.
+- `show(state, side)` is called at the moment the screen changes, already on the venue's shared
+  clock, so every screen's call lands on the same frame:
+  - `"character"`: the character is on this screen now. `side` is `"left"` or `"right"`, the edge
+    it comes in through, or `null` when it is placed without a handoff (the first follow, or a
+    screen that has just connected).
+  - `"blank"`: it has left this screen. `side` is the edge it leaves through.
+  - `"idle"`: no one is around, on every screen at once. `side` is `null`.
+- `prepare()` is called before a handoff brings the character here. Load what the entrance needs
+  and return, or return a promise that settles when it is loaded. The screen tells the character
+  it is ready only then, and the handoff waits for it, but for at most `ready_timeout_s` (1 s):
+  after that the character moves anyway, so `show` must cope with a load that hasn't finished.
+
+A `"character"` call can follow a `"character"` or `"blank"` call at any time, and either can
+arrive without a `prepare()` first, so a creative never assumes an order.
 
 ## Actors
 
@@ -105,6 +142,9 @@ Someone walking past along the far wall doesn't wake the character. The slider u
 changes it live for that page's connection. The floor shows the cut-off as a dashed line and dims
 anyone beyond it. Copy a value you like into `venue.toml`: a restart starts from the file again.
 
+`[screen] creative` (default `"koi"`) is what the screens show: see
+[Making a creative](#making-a-creative).
+
 `[radar]` is the LD2450's view: where it sits on the screen line (the middle of the floor unless
 `x_m` says otherwise), its range (6 m) and its field of view (120°, ±60° from straight out). Only what is inside that sector counts. The floor page
 shades everything outside it. With one sensor in the middle, people standing close to the side
@@ -121,7 +161,7 @@ nearest it sees them.
 | Follow cap (the creepiness mitigation) | after a first walk-through |
 | Walking-speed lead on the handoff time | latency is measured on tablets |
 | Loop-lag metric | it runs on the Pi |
-| Real creatives: the character is a drawn koi (`static/koi.js`) | Promovolve supplies assets |
+| Real creatives: the character is a drawn koi (`static/creatives/koi.js`) | Promovolve supplies assets |
 
 ## Contributing
 

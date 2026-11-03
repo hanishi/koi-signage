@@ -4,8 +4,6 @@
 // from the fastest ping of the last minute, and enter/exit run at local time t - offset,
 // so two screens change on the same frame.
 
-import { pond } from "./koi.js";
-
 const now = () => performance.now() / 1000;
 
 // Pings go every 10 s, so 6 samples is the last minute. Keeping the smallest round trip of all
@@ -19,15 +17,17 @@ export function offsetFrom(samples) {
   return best.s - (best.c + (best.r - best.c) / 2);
 }
 
-export function connectScreen(n, el) {
+// Screen n in el, drawn by create, the creative's entry point: see "Making a creative" in the
+// README for the contract.
+export function connectScreen(n, el, create) {
   let ws;
   let offset = 0;
   let samples = [];
   let backoff = 0.5;
   let pending = [];
 
-  const koi = pond(el.querySelector("canvas"));
-  const show = (state, side = null) => { el.dataset.state = state; koi.show(state, side); };
+  const creative = create(el.querySelector("canvas"));
+  const show = (state, side = null) => { el.dataset.state = state; creative.show(state, side); };
   const send = (frame) => { if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(frame)); };
   const ping = () => send({ type: "ping", c: now() });
   // every t is now or now + handoff_lead_s on the venue clock: anything further means the
@@ -59,9 +59,9 @@ export function connectScreen(n, el) {
           show("idle");
           break;
         case "prepare":
-          // ponytail: the koi is drawn, so nothing to load; real creatives preload here
-          koi.ripple(); // the water stirs: something may come
-          send({ type: "ready" });
+          // ready once the creative has what the entrance needs; the handoff waits for it, up
+          // to ready_timeout_s
+          Promise.resolve(creative.prepare()).then(() => send({ type: "ready" }));
           break;
         case "cancel":
           break;

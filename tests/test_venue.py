@@ -114,3 +114,21 @@ def test_radar_centred_on_the_floor_unless_placed(tmp_path: Path) -> None:
     assert load_venue(four).radar_x_m == 6.0  # the middle of 12 m, without being told
     four.write_text(FOUR.replace("range_m = 6.0", "x_m = 2.0\nrange_m = 6.0"))
     assert load_venue(four).radar_x_m == 2.0
+
+
+def test_creative_is_koi_unless_named(tmp_path: Path) -> None:
+    assert V.creative == "koi"
+    bare = tmp_path / "venue.toml"
+    old = "\n".join(
+        line for line in GOOD.splitlines() if "screen]" not in line and "creative" not in line
+    )
+    bare.write_text(old)  # a venue.toml from before creatives
+    assert load_venue(bare).creative == "koi"
+
+
+@pytest.mark.parametrize("name", ["carp", "../koi", "", "creatives/koi"])
+def test_rejects_a_creative_that_isnt_there(tmp_path: Path, name: str) -> None:
+    bad = tmp_path / "venue.toml"
+    bad.write_text(GOOD.replace('creative = "koi"', f'creative = "{name}"'))
+    with pytest.raises(ValueError, match="creative"):
+        load_venue(bad)
