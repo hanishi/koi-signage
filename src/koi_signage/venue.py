@@ -4,6 +4,7 @@ Tracking is pure functions while it holds no state. It becomes an actor when smo
 standing-person memory needs some."""
 
 import math
+import re
 import tomllib
 from bisect import bisect_right
 from collections.abc import Sequence
@@ -12,6 +13,7 @@ from pathlib import Path
 
 ZONES_PER_SCREEN = 3
 DEFAULT_VENUE = Path(__file__).with_name("venue.toml")  # the defaults the package ships
+CREATIVES = Path(__file__).parent / "static" / "creatives"  # one <name>.js per creative
 
 
 @dataclass(frozen=True)
@@ -40,6 +42,7 @@ class Venue:
     dead_zone_m: float
     handoff_lead_s: float
     ready_timeout_s: float
+    creative: str
 
 
 def load_venue(path: Path) -> Venue:
@@ -66,6 +69,9 @@ def load_venue(path: Path) -> Venue:
     rr, fov = float(radar["range_m"]), float(radar["fov_deg"])
     if not (0 <= rx <= width and rr > 0 and 0 < fov <= 180):
         raise ValueError("radar needs x_m in [0, width_m], range_m > 0, fov_deg in (0, 180]")
+    creative = doc.get("screen", {}).get("creative", "koi")
+    if not (re.fullmatch(r"[a-z0-9_-]+", creative) and (CREATIVES / f"{creative}.js").is_file()):
+        raise ValueError(f"no creative {creative!r}: it names a file in {CREATIVES}, minus .js")
     return Venue(
         screens=screens,
         width_m=width,
@@ -83,6 +89,7 @@ def load_venue(path: Path) -> Venue:
         dead_zone_m=float(ch["dead_zone_m"]),
         handoff_lead_s=float(ch["handoff_lead_s"]),
         ready_timeout_s=float(ch["ready_timeout_s"]),
+        creative=creative,
     )
 
 

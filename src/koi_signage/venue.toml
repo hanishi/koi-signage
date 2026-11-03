@@ -8,6 +8,9 @@ depth_m = 4.0
 zone_cuts_m = [1, 2, 3, 4, 5, 6, 7, 8]   # 3 zones per screen, so 3 × screens − 1 cuts, left to right
 max_distance_m = 3.0   # further from the screens than this is ignored (the floor page has a slider)
 
+[screen]
+creative = "koi"        # what the screens show: static/creatives/<name>.js
+
 [radar]                 # one HLK-LD2450 on the screen line, facing the floor
 # x_m = 4.5             # where along the corridor it is mounted; the middle of the floor if unset
 range_m = 6.0           # it sees this far, measured from the sensor

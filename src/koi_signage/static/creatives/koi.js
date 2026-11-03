@@ -71,7 +71,7 @@ const FORMATION = [[0, 0], [0.75, -0.6], [0.8, 0.6], [1.5, -0.25], [1.55, 0.7]];
 // same on every screen, so a koi leaves and arrives at the same height.
 const CROSS_Y = [0.5, 0.36, 0.64, 0.43, 0.57];
 
-export function pond(canvas) {
+export function create(canvas) {
   const ctx = canvas.getContext("2d");
   const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
   let W = 1, H = 1, unit = 1, dpr = 1;
@@ -528,5 +528,5 @@ export function pond(canvas) {
   }
   requestAnimationFrame(frame);
 
-  return { show, ripple: () => ripple() };
+  return { show, prepare: () => ripple() };
 }

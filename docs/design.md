@@ -30,7 +30,7 @@ Success:
 | Follow cap (screens or seconds, the creepiness mitigation) | after a first walk-through |
 | Walking-speed lead on the handoff time | latency is measured on tablets |
 | Loop-lag metric | it runs on the Pi |
-| Real creatives: the character is a drawn koi (`static/koi.js`) | Promovolve supplies assets |
+| Real creatives: the character is a drawn koi (`static/creatives/koi.js`) | Promovolve supplies assets |
 
 ## Stack
 

@@ -60,6 +60,7 @@ def test_venue_for_the_page() -> None:
             "screens": 3,
             "zone_cuts_m": [1, 2, 3, 4, 5, 6, 7, 8],
             "radar": {"x_m": 4.5, "range_m": 6.0, "fov_deg": 120.0},
+            "creative": "koi",
         }
 
 
@@ -69,7 +70,7 @@ def test_pages_served() -> None:
         assert "connectScreen" in client.get("/screen").text
         js = client.get("/static/screen.js")
         assert js.headers["content-type"].startswith("text/javascript")
-        assert "export function pond" in client.get("/static/koi.js").text
+        assert "export function create" in client.get("/static/creatives/koi.js").text
         assert client.get("/static/app.py").status_code == 404
 
 

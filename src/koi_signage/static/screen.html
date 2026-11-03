@@ -16,9 +16,11 @@
   const n = Number(new URLSearchParams(location.search).get("n") ?? 0);
   document.title = `Screen ${n}`;
   document.head.append(Object.assign(document.createElement("style"), { textContent: SCREEN_CSS }));
+  const venue = await (await fetch("/venue")).json();
+  const { create } = await import(`/static/creatives/${venue.creative}.js`);
   const el = screenElement();
   document.body.append(el);
-  connectScreen(n, el);
+  connectScreen(n, el, create);
 </script>
 </body>
 </html>
