@@ -46,19 +46,26 @@ screen number: they mirror each other.
 
 ## The koi
 
-`src/koi_signage/static/koi.js` draws it on a canvas, from above, about 60 times a second. There
-are no image files.
-- **Spine:** a chain of 18 points. The head steers toward a target and each point follows the one
-  ahead, so the body bends as it turns. A wave runs down the chain as it swims.
+A school of five, each a different variety: Taisho Sanke (leading), Kohaku, Showa, Yamabuki Ogon
+and Asagi. `src/koi_signage/static/koi.js` draws them on a canvas, from above, about 60 times a
+second. There are no image files.
+- **Spine:** each koi is a chain of 18 points. The head steers toward a target and each point
+  follows the one ahead, so the body bends as it turns. A wave runs down the chain as it swims.
 - **Body:** a width profile along the spine gives the outline. The markings are defined in body
   coordinates (along and across), so they bend with it.
-- **Depth:** one value fades and blurs it from the surface down to the deep, where it waits
-  while the venue idles.
-- **Handoff:** the leaving screen's koi reaches its edge 0.9 s after the handoff time. The next
-  screen's koi starts in from the facing edge at that same moment, on the shared clock, so it
-  seems to swim across.
+- **School:** each koi keeps a place behind the leader, which wanders the screen, and steers away
+  from any koi that comes too close.
+- **Depth:** the school swims near the surface on its screen and drifts deep, faded into the
+  water, while the venue idles.
+- **Handoff:** on the leaving screen, each koi reaches the edge at its own moment (the first
+  0.9 s after the handoff time, then one every 0.35 s) and its own height. The next screen brings
+  the same koi in from the facing edge at that moment and height, on the shared clock, so the
+  school swims across one fish at a time.
+- **No blur filters:** each canvas blur renders a full-screen layer, too slow for five koi on a
+  tablet. Soft edges come from layered translucent strokes.
 
-Change the colours, `halfWidth` or the patches at the top of `koi.js` for a different fish.
+Change the colours, `halfWidth`, `VARIETIES` or `FORMATION` at the top of `koi.js` for a
+different school.
 
 ## Actors
 
